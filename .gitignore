@@ -1,4 +1,10 @@
 target/
+
+# Maven wrapper: scripts and maven-wrapper.properties ARE committed; downloaded
+# distributions and the legacy wrapper jar are not.
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/dists/
+
 .idea/
 *.iml
 .vscode/

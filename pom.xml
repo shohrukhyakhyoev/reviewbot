@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>dev.reviewbot</groupId>
+  <artifactId>reviewbot-parent</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>reviewbot (parent)</name>
+  <description>AI-generated code reviews on GitHub pull requests — multi-module build root.</description>
+
+  <!--
+    Module layout mirrors spec v1.2 section 2. `infra/` is a plain directory (compose,
+    Flyway migrations, k8s manifests, dashboards) and is deliberately NOT a Maven module.
+  -->
+  <modules>
+    <module>shared</module>
+    <module>webhook-gateway</module>
+    <module>review-worker</module>
+    <module>retry-worker</module>
+  </modules>
+
+  <properties>
+    <java.version>21</java.version>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- Dependency versions. Spring Boot's BOM pins Jackson, Flyway, the Postgres
+         driver, Testcontainers and kafka-clients; the pins below are the ones Boot
+         does not own, or where we want an explicit version of our own. -->
+    <spring-boot.version>3.3.5</spring-boot.version>
+    <resilience4j.version>2.2.0</resilience4j.version>
+    <kafka-clients.version>3.8.1</kafka-clients.version>
+    <redisson.version>3.35.0</redisson.version>
+    <wiremock.version>3.9.2</wiremock.version>
+
+    <!-- Plugin versions -->
+    <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
+    <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+    <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
+    <maven-failsafe-plugin.version>3.5.2</maven-failsafe-plugin.version>
+    <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
+    <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.github.resilience4j</groupId>
+        <artifactId>resilience4j-bom</artifactId>
+        <version>${resilience4j.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <!-- Own module -->
+      <dependency>
+        <groupId>dev.reviewbot</groupId>
+        <artifactId>shared</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <!-- Plain Kafka clients: the parallel consumer in review-worker is hand-built
+           (spec section 8), so no spring-kafka and no Confluent Parallel Consumer. -->
+      <dependency>
+        <groupId>org.apache.kafka</groupId>
+        <artifactId>kafka-clients</artifactId>
+        <version>${kafka-clients.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.redisson</groupId>
+        <artifactId>redisson</artifactId>
+        <version>${redisson.version}</version>
+      </dependency>
+
+      <!-- Shaded standalone build: keeps WireMock's Jetty off the app classpath. -->
+      <dependency>
+        <groupId>org.wiremock</groupId>
+        <artifactId>wiremock-standalone</artifactId>
+        <version>${wiremock.version}</version>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven-compiler-plugin.version}</version>
+          <configuration>
+            <release>${maven.compiler.release}</release>
+            <compilerArgs>
+              <arg>-parameters</arg>
+            </compilerArgs>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${maven-surefire-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>${maven-failsafe-plugin.version}</version>
+          <executions>
+            <execution>
+              <goals>
+                <goal>integration-test</goal>
+                <goal>verify</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+          <version>${spring-boot.version}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <!-- Spec section 2 dependency rule, enforced mechanically: the three deployables
+           depend on `shared`, never on each other. Banning the deployable artifacts as
+           dependencies is safe to inherit — a module is never its own dependency. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${maven-enforcer-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>enforce-build-rules</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>[3.9.0,)</version>
+                </requireMavenVersion>
+                <requireJavaVersion>
+                  <version>[21,22)</version>
+                  <message>Java 21 only — do not build with 22+ (see CLAUDE.md tech stack).</message>
+                </requireJavaVersion>
+                <bannedDependencies>
+                  <searchTransitive>true</searchTransitive>
+                  <excludes>
+                    <exclude>dev.reviewbot:webhook-gateway</exclude>
+                    <exclude>dev.reviewbot:review-worker</exclude>
+                    <exclude>dev.reviewbot:retry-worker</exclude>
+                  </excludes>
+                  <message>
+                    Deployable modules must not depend on one another (spec v1.2 section 2).
+                    Share code through the `shared` module instead.
+                  </message>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Format gate. `mvn spotless:apply` fixes violations. -->
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless-maven-plugin.version}</version>
+        <configuration>
+          <!-- LF everywhere: developers are on Windows, CI is Linux. Without this
+               Spotless follows the platform and the check flips per machine. -->
+          <lineEndings>UNIX</lineEndings>
+          <java>
+            <includes>
+              <include>src/main/java/**/*.java</include>
+              <include>src/test/java/**/*.java</include>
+            </includes>
+            <removeUnusedImports/>
+            <importOrder>
+              <order>java,javax,jakarta,,dev.reviewbot</order>
+            </importOrder>
+            <indent>
+              <spaces>true</spaces>
+              <spacesPerTab>2</spacesPerTab>
+            </indent>
+            <trimTrailingWhitespace/>
+            <endWithNewline/>
+          </java>
+        </configuration>
+        <executions>
+          <execution>
+            <id>spotless-check</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Coverage measurement. The gate thresholds (section 18: 80% overall, ~100%
+           branch on the engine classes) are configured in CI by E2-1. -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco-maven-plugin.version}</version>
+        <configuration>
+          <excludes>
+            <exclude>**/*Application.class</exclude>
+          </excludes>
+        </configuration>
+        <executions>
+          <execution>
+            <id>jacoco-prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>jacoco-report</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

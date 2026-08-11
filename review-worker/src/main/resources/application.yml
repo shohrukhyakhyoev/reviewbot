@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: review-worker
+  main:
+    web-application-type: none

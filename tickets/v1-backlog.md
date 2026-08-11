@@ -33,7 +33,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 # **E2 — Infra & scaffold**
 
-### **\[ \] \[E2-0\] Maven multi-module skeleton**
+### **\[x\] \[E2-0\] Maven multi-module skeleton**
 
 **Epic:** E2 · **Depends on:** none · **Size:** S
 

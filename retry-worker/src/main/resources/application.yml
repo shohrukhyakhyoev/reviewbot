@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: retry-worker
+  main:
+    web-application-type: none

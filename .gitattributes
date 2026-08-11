@@ -1,0 +1,15 @@
+# Normalize to LF in the repository and in working trees. Spotless enforces LF
+# in sources (see the parent POM); this keeps git from reintroducing CRLF on Windows.
+* text=auto eol=lf
+
+# Must stay LF to be executable as a shell script.
+mvnw text eol=lf
+
+# Windows-only scripts keep CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binaries.
+*.jar binary
+*.png binary
+*.zip binary

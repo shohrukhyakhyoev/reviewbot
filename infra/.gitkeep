@@ -1,0 +1,2 @@
+# infra/ is a plain directory, deliberately NOT a Maven module (spec v1.2 section 2).
+# docker-compose lands here in E2-2, Flyway migrations and k8s manifests later.
