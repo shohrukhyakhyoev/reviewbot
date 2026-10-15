@@ -38,6 +38,11 @@
     <redisson.version>3.35.0</redisson.version>
     <wiremock.version>3.9.2</wiremock.version>
 
+    <!-- Coverage gates (spec section 18). Engine branch coverage is "~100%": 0.95 leaves
+         room for branches that are genuinely unreachable. Overall line gate: see
+         .github/scripts/coverage-gate.sh. -->
+    <jacoco.engine.branch.minimum>0.95</jacoco.engine.branch.minimum>
+
     <!-- Plugin versions -->
     <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
     <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
@@ -214,8 +219,11 @@
         </executions>
       </plugin>
 
-      <!-- Coverage measurement. The gate thresholds (section 18: 80% overall, ~100%
-           branch on the engine classes) are configured in CI by E2-1. -->
+      <!-- Coverage measurement plus the engine gate (section 18). The engine rule fires
+           per class in dev.reviewbot.worker.engine (the hand-built consumer, section 8) and
+           matches nothing until E4 puts classes there. The overall >= 80% line gate cannot
+           live here: `check` is per module, so CI aggregates across modules instead
+           (.github/scripts/coverage-gate.sh). -->
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
@@ -238,6 +246,30 @@
             <goals>
               <goal>report</goal>
             </goals>
+          </execution>
+          <execution>
+            <id>jacoco-check-engine</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <rule>
+                  <element>CLASS</element>
+                  <includes>
+                    <include>dev.reviewbot.worker.engine.*</include>
+                  </includes>
+                  <limits>
+                    <limit>
+                      <counter>BRANCH</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>${jacoco.engine.branch.minimum}</minimum>
+                    </limit>
+                  </limits>
+                </rule>
+              </rules>
+            </configuration>
           </execution>
         </executions>
       </plugin>
