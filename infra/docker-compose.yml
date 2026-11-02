@@ -1,0 +1,93 @@
+# Local dev stack: single-broker Kafka (KRaft), Postgres 16, Redis 7, WireMock.
+# Run from anywhere:  docker compose -f infra/docker-compose.yml up -d --wait
+#
+# Kafka deliberately runs RF=1 / min.insync.replicas=1 (spec §4.4, §19.15).
+# Production (MSK) uses RF=3 / ISR=2. Do NOT "fix" this: a single broker cannot
+# host RF=3, and locally there are no NOT_ENOUGH_REPLICAS errors to chase.
+name: reviewbot
+
+services:
+  kafka:
+    image: apache/kafka:3.8.1
+    container_name: reviewbot-kafka
+    ports:
+      - "9092:9092" # host listener (apps run from the IDE connect here)
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # HOST    -> localhost:9092 for processes on the dev machine
+      # INTERNAL-> kafka:19092 for other containers on the compose network
+      KAFKA_LISTENERS: HOST://:9092,INTERNAL://:19092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,INTERNAL://kafka:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: HOST:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      # E2-4's provisioning is the ONLY source of topics.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      # Single broker: RF=1 / ISR=1 everywhere (intentional divergence from prod).
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:19092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: reviewbot-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      # Local-only dev credentials.
+      POSTGRES_DB: reviewbot
+      POSTGRES_USER: reviewbot
+      POSTGRES_PASSWORD: reviewbot
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reviewbot -d reviewbot"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    container_name: reviewbot-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # Stands in for GitHub and Anthropic when running the apps by hand.
+  # Mappings dir is intentionally empty; per-test stubs live in Testcontainers (§18).
+  wiremock:
+    image: wiremock/wiremock:3.9.2
+    container_name: reviewbot-wiremock
+    ports:
+      - "8089:8080"
+    volumes:
+      - ./wiremock/mappings:/home/wiremock/mappings
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/__admin/mappings >/dev/null || wget -q -O /dev/null http://localhost:8080/__admin/mappings"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+volumes:
+  kafka-data:
+  postgres-data:
