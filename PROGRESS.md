@@ -10,9 +10,9 @@ Keep entries short and factual. Newest at the top of "Completed". The point is o
 ## Current state (update this line every session)
 
 - **Phase:** E2 — Infra & scaffold.
-- **Last ticket completed:** E2-1 (CI pipeline).
-- **Next ticket:** E2-2 (local compose stack). Execution order is E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → … (E1 depends on E2-0).
-- **Build status:** `./mvnw clean verify` green locally and in CI (PR #2) — 5 reactor modules, 3 tests.
+- **Last ticket completed:** E2-2 (local compose stack).
+- **Next ticket:** E2-3 (Flyway V1 migration). Execution order is E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → … (E1 depends on E2-0).
+- **Build status:** `./mvnw clean verify` green locally (after E2-2; CI green as of E2-1, PR #2) — 5 reactor modules, 3 tests.
 
 ---
 
@@ -31,6 +31,12 @@ At the end of each ticket, add a "Completed" entry with: ticket ID, one line on 
 - Files/modules: notable additions.
 - Tests: what's covered.
 -->
+
+### [E2-2] Local compose stack — 2026-10-15
+- Built: `infra/docker-compose.yml` (project `reviewbot`): Kafka `apache/kafka:3.8.1` (KRaft single broker, RF=1/ISR=1, `auto.create.topics.enable=false`), `postgres:16-alpine`, `redis:7-alpine`, `wiremock/wiremock:3.9.2` (empty `infra/wiremock/mappings/`). Healthchecks on all four; named volumes `kafka-data`, `postgres-data`. Plus `infra/verify-stack.sh` and `infra/README.md`.
+- Decisions: **Kafka listeners:** `localhost:9092` for host processes (apps run from the IDE), `kafka:19092` for other containers; E2-4's provisioning should use one of these (e.g. `docker compose exec kafka ... --bootstrap-server localhost:19092`). **WireMock host port is 8089** (container 8080) so 8080 stays free for Spring Boot apps. Postgres db/user/password are all `reviewbot` (local only). Kafka image tag matches the `kafka-clients` 3.8.1 pin. Redis has no auth/persistence. `verify-stack.sh` runs checks via `docker compose exec` (no host Kafka/psql/redis clients) except WireMock, which uses host `curl`; it `cd`s into `infra/` instead of passing `-f <path>`, and sets `MSYS_NO_PATHCONV=1` — both needed because Git Bash on Windows mangles `/opt/kafka/...` container paths and, once conversion is off, unresolved POSIX `-f` paths.
+- Files/modules: `infra/docker-compose.yml`, `infra/verify-stack.sh`, `infra/README.md`, `infra/wiremock/mappings/.gitkeep`.
+- Tests: manual, no Java. Cold start (fresh images + volumes) `up -d --wait` reached all-healthy in ~90 s including image pulls. `verify-stack.sh` exit 0 with stack up (from repo root, `/tmp`, and via `./`), exit 1 with stack down. Effective broker config checked via `kafka-configs.sh`: `auto.create.topics.enable=false`, `min.insync.replicas=1`, `default.replication.factor=1`, `offsets.topic.replication.factor=1`; producing to a missing topic over the host listener returned `UNKNOWN_TOPIC_OR_PARTITION` and created nothing. `./mvnw clean verify` green.
 
 ### [E2-1] CI pipeline — 2026-10-15
 - Built: `.github/workflows/ci.yml` on PRs + pushes to `main` (Spotless fast-fail → `./mvnw clean verify` → overall line gate → JaCoCo report artifact; Maven repo + wrapper cached). Engine rule in the parent POM: per-class BRANCH COVEREDRATIO ≥ 0.95 on `dev.reviewbot.worker.engine.*` (matches nothing until E4).
@@ -67,6 +73,8 @@ Things spotted mid-work that belong to a later tier/epic. Record, don't build.
 - **First failsafe integration tests (E4/E5):** confirm their coverage lands in the same `target/jacoco.exec` (the parent's `prepare-agent` argLine should cover failsafe too, unverified) and that `coverage-gate.sh` sees it.
 - **Action versions:** `actions/checkout`, `cache`, `upload-artifact` @v4 only warn that Node 20 is deprecated (forced to Node 24 meanwhile); bump when convenient.
 - **`shared` is a plain jar with no Spring dependency.** Spec §2 puts `processReview(event, attemptContext)` in `shared`; when E5 lands it, decide then whether `shared` needs `spring-context` (optional scope) or whether the seam stays framework-free. Not a decision for E2-0.
+- **`infra/verify-stack.sh` needs mode 100755 in git** — Windows checkouts don't carry the exec bit; stage with `git add --chmod=+x infra/verify-stack.sh` (same as `coverage-gate.sh`).
+- **No Kafka healthcheck beyond "broker answers"** — compose doesn't verify the topic set; that's E2-4's job. WireMock's healthcheck tries `curl` then `wget` (unverified which the image provides; it passes either way).
 - **Failsafe is configured in `pluginManagement` but not activated in any module** — it binds itself when a module first declares it, from E4/E5 integration tests onward.
 
 ---
