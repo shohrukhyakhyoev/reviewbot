@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(python *scripts/claude/ctx.py*)",
+      "Bash(python *scripts/claude/verify.py*)",
+      "Bash(python *scripts/claude/selftest.py*)",
+      "PowerShell(python *scripts/claude/ctx.py*)",
+      "PowerShell(python *scripts/claude/verify.py*)",
+      "PowerShell(python *scripts/claude/selftest.py*)",
+      "Bash(cat *docs/learning/notion.json*)",
+      "Bash(ls *docs/learning/inbox*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_start.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell|Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pretool_guard.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

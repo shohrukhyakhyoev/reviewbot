@@ -5,7 +5,7 @@
 ## **How to use this document**
 
 - **Workflow per ticket:** pick the next ticket whose dependencies are all DONE → the implementing agent (Claude Code) reads **only** the ticket plus the listed spec sections of spec v1.2 → implements, including all named tests → the human reviews the entire diff → update PROGRESS.md and the ticket state.  
-- **Ticket states:** prefix each ticket header line in this file as work proceeds: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (note why inline).  
+- **Ticket states:** tracked in `tickets/status.md` (the single source of each ticket's state and mode). Ticket headers here carry no state markers (they had drifted).  
 - **Sizing:** one ticket \= one focused session \= one component or one coherent group of pipeline steps, including tests. S ≈ small diff, M ≈ typical session, L ≈ full session, review carefully. Pre-authorized in-flight splits exist for E5-3 and E10-0 (named at the ticket) — take them if a session runs long, without renumbering.  
 - **Gates (always):** build green · lint clean · JaCoCo ≥ 80% overall · engine classes (§8) \~100% branch · OffsetTracker property-tested over randomized completion orders · PROGRESS.md updated.  
 - **Ruling-local copies:** where an O-ruling postdated a ticket, the ruling text is baked into the ticket below; spec v1.2 carries the same content — on any perceived conflict, spec v1.2 wins.  
@@ -33,7 +33,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 # **E2 — Infra & scaffold**
 
-### **\[x\] \[E2-0\] Maven multi-module skeleton**
+### **\[E2-0\] Maven multi-module skeleton**
 
 **Epic:** E2 · **Depends on:** none · **Size:** S
 
@@ -64,7 +64,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E2-1\] CI pipeline**
+### **\[E2-1\] CI pipeline**
 
 **Epic:** E2 · **Depends on:** E2-0 · **Size:** S
 
@@ -93,7 +93,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E2-2\] Local compose stack**
+### **\[E2-2\] Local compose stack**
 
 **Epic:** E2 · **Depends on:** E2-0 · **Size:** M
 
@@ -122,7 +122,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E2-3\] Flyway V1 migration**
+### **\[E2-3\] Flyway V1 migration**
 
 **Epic:** E2 · **Depends on:** E2-0, E2-2 · **Size:** S
 
@@ -150,7 +150,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E2-4\] Topic provisioning**
+### **\[E2-4\] Topic provisioning**
 
 **Epic:** E2 · **Depends on:** E2-2 · **Size:** S
 
@@ -183,7 +183,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 # **E1 — Shared contracts**
 
-### **\[ \] \[E1-0\] Event envelope, validation & header codecs**
+### **\[E1-0\] Event envelope, validation & header codecs**
 
 **Epic:** E1 · **Depends on:** E2-0 · **Size:** M
 
@@ -213,7 +213,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E1-1\] PR key \+ Redis key builders**
+### **\[E1-1\] PR key \+ Redis key builders**
 
 **Epic:** E1 · **Depends on:** E2-0 · **Size:** S
 
@@ -241,7 +241,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E1-2\] Failure classification \+ outcome types**
+### **\[E1-2\] Failure classification \+ outcome types**
 
 **Epic:** E1 · **Depends on:** E2-0 · **Size:** M
 
@@ -271,7 +271,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E1-3\] DLQ envelope builder**
+### **\[E1-3\] DLQ envelope builder**
 
 **Epic:** E1 · **Depends on:** E1-0, E1-2 · **Size:** S
 
@@ -301,7 +301,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E1-4\] ReviewGenerator port \+ domain types**
+### **\[E1-4\] ReviewGenerator port \+ domain types**
 
 **Epic:** E1 · **Depends on:** E2-0 · **Size:** S
 
@@ -330,7 +330,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E1-5\] Config models \+ constants**
+### **\[E1-5\] Config models \+ constants**
 
 **Epic:** E1 · **Depends on:** E2-0, E1-4 · **Size:** M
 
@@ -361,7 +361,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 # **E3 — Webhook gateway**
 
-### **\[ \] \[E3-0\] HMAC verification filter**
+### **\[E3-0\] HMAC verification filter**
 
 **Epic:** E3 · **Depends on:** E2-0 · **Size:** S
 
@@ -390,7 +390,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E3-1\] Event filter \+ envelope build**
+### **\[E3-1\] Event filter \+ envelope build**
 
 **Epic:** E3 · **Depends on:** E3-0, E1-0 · **Size:** M
 
@@ -419,7 +419,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E3-2\] Delivery dedup component**
+### **\[E3-2\] Delivery dedup component**
 
 **Epic:** E3 · **Depends on:** E1-1 · **Size:** S
 
@@ -448,7 +448,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E3-3\] Producer \+ endpoint orchestration**
+### **\[E3-3\] Producer \+ endpoint orchestration**
 
 **Epic:** E3 · **Depends on:** E3-1, E3-2, E1-5 · **Size:** M
 
@@ -480,7 +480,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 # **E4 — Consumer engine**
 
-### **\[ \] \[E4-0\] OffsetTracker**
+### **\[E4-0\] OffsetTracker**
 
 **Epic:** E4 · **Depends on:** E2-0 · **Size:** M
 
@@ -511,7 +511,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E4-1\] Coalescer (pipeline step 0\)**
+### **\[E4-1\] Coalescer (pipeline step 0\)**
 
 **Epic:** E4 · **Depends on:** E1-0, E1-2 · **Size:** S
 
@@ -540,7 +540,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E4-2\] Dispatcher \+ drainer \+ retirement**
+### **\[E4-2\] Dispatcher \+ drainer \+ retirement**
 
 **Epic:** E4 · **Depends on:** E4-0, E4-1, E1-1 · **Size:** L
 
@@ -571,7 +571,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E4-3\] Poller**
+### **\[E4-3\] Poller**
 
 **Epic:** E4 · **Depends on:** E4-0, E4-2, E1-5 · **Size:** M
 
@@ -603,7 +603,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E4-4\] Rebalance listener \+ shutdown**
+### **\[E4-4\] Rebalance listener \+ shutdown**
 
 **Epic:** E4 · **Depends on:** E4-3 · **Size:** M
 
@@ -634,7 +634,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E4-5\] Engine integration test**
+### **\[E4-5\] Engine integration test**
 
 **Epic:** E4 · **Depends on:** E4-4 · **Size:** L
 
@@ -670,7 +670,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 *Module home (ruled): pipeline, clients, and adapter live in `shared` (§2/§7's first-listed option). Milestone: after E5-9b the system runs webhook → posted review, all outcomes handled; E5-10 proves it in CI.*
 
-### **\[ \] \[E5-0\] Reviews persistence \+ claim state machine**
+### **\[E5-0\] Reviews persistence \+ claim state machine**
 
 **Epic:** E5 · **Depends on:** E2-3, E1-2, E1-5 · **Size:** L
 
@@ -701,7 +701,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E5-1\] GitHub client foundation**
+### **\[E5-1\] GitHub client foundation**
 
 **Epic:** E5 · **Depends on:** E1-2, E1-5 · **Size:** M
 
@@ -730,7 +730,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E5-2\] Redis pipeline services: dedup \+ lock**
+### **\[E5-2\] Redis pipeline services: dedup \+ lock**
 
 **Epic:** E5 · **Depends on:** E1-1, E1-5, E5-0 · **Size:** M
 
@@ -759,7 +759,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E5-3\] BYOK key crypto \+ Anthropic adapter**
+### **\[E5-3\] BYOK key crypto \+ Anthropic adapter**
 
 **Epic:** E5 · **Depends on:** E1-4, E1-2, E1-5, E5-0 · **Size:** L — *pre-authorized in-flight split at the crypto | adapter seam (crypto lands first) if the session runs long*
 
@@ -790,7 +790,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E5-4\] Pipeline steps 1–4: gates \+ live fetch**
+### **\[E5-4\] Pipeline steps 1–4: gates \+ live fetch**
 
 **Epic:** E5 · **Depends on:** E5-0, E5-1, E5-2 · **Size:** M
 
@@ -817,7 +817,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E5-5\] Pipeline steps 5–6: lock \+ claim**
+### **\[E5-5\] Pipeline steps 5–6: lock \+ claim**
 
 **Epic:** E5 · **Depends on:** E5-4 · **Size:** M
 
@@ -846,7 +846,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E5-6\] Pipeline steps 7–11: config, diff, size guard, generate, filter**
+### **\[E5-6\] Pipeline steps 7–11: config, diff, size guard, generate, filter**
 
 **Epic:** E5 · **Depends on:** E5-5, E5-3, E5-1 · **Size:** M
 
@@ -876,7 +876,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E5-7\] Step 12: body render, HMAC marker, blind post**
+### **\[E5-7\] Step 12: body render, HMAC marker, blind post**
 
 **Epic:** E5 · **Depends on:** E5-6 · **Size:** M
 
@@ -905,7 +905,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E5-8\] Post-attempt guard (§7.12b) \+ marker search**
+### **\[E5-8\] Post-attempt guard (§7.12b) \+ marker search**
 
 **Epic:** E5 · **Depends on:** E5-7 · **Size:** M
 
@@ -934,7 +934,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E5-9a\] Finalize \+ SUCCESS/SKIP \+ worker wiring \+ producer**
+### **\[E5-9a\] Finalize \+ SUCCESS/SKIP \+ worker wiring \+ producer**
 
 **Epic:** E5 · **Depends on:** E5-8, E4-2 · **Size:** M
 
@@ -964,7 +964,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E5-9b\] Failure outcome handlers \+ V-2 — milestone ticket**
+### **\[E5-9b\] Failure outcome handlers \+ V-2 — milestone ticket**
 
 **Epic:** E5 · **Depends on:** E5-9a, E1-3 · **Size:** M
 
@@ -996,7 +996,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E5-10\] End-to-end happy path \+ idempotency integration test**
+### **\[E5-10\] End-to-end happy path \+ idempotency integration test**
 
 **Epic:** E5 · **Depends on:** E5-9b, E3-3 · **Size:** L
 
@@ -1028,7 +1028,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 # **E6 — Retry worker**
 
-### **\[ \] \[E6-0\] Pause-until-due retry consumer loop**
+### **\[E6-0\] Pause-until-due retry consumer loop**
 
 **Epic:** E6 · **Depends on:** E2-0, E1-0, E1-5 · **Size:** M
 
@@ -1059,7 +1059,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E6-1\] Retry processing: one core, both workers**
+### **\[E6-1\] Retry processing: one core, both workers**
 
 **Epic:** E6 · **Depends on:** E6-0, E5-9b · **Size:** M
 
@@ -1090,7 +1090,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E6-2\] `retry_delay_excess` \+ retry-flow integration test**
+### **\[E6-2\] `retry_delay_excess` \+ retry-flow integration test**
 
 **Epic:** E6 · **Depends on:** E6-1 · **Size:** M
 
@@ -1125,7 +1125,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 # **E7 — DLQ surface**
 
-### **\[ \] \[E7-0\] DLQ indexer**
+### **\[E7-0\] DLQ indexer**
 
 **Epic:** E7 · **Depends on:** E5-9b, E2-3 · **Size:** M
 
@@ -1156,7 +1156,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E7-1\] Admin endpoints: list / replay / discard**
+### **\[E7-1\] Admin endpoints: list / replay / discard**
 
 **Epic:** E7 · **Depends on:** E7-0, E3-3 · **Size:** M
 
@@ -1188,7 +1188,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E7-2\] DLQ metrics \+ resolution integration test**
+### **\[E7-2\] DLQ metrics \+ resolution integration test**
 
 **Epic:** E7 · **Depends on:** E7-1, E6-1, E5-10 · **Size:** M
 
@@ -1224,7 +1224,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 # **E8 — Degraded modes**
 
-### **\[ \] \[E8-0\] Provider breakers \+ client decoration**
+### **\[E8-0\] Provider breakers \+ client decoration**
 
 **Epic:** E8 · **Depends on:** E5-1, E5-3, E1-2 · **Size:** M
 
@@ -1254,7 +1254,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E8-1\] Dependency gate: breaker → pause wiring**
+### **\[E8-1\] Dependency gate: breaker → pause wiring**
 
 **Epic:** E8 · **Depends on:** E8-0, E4-3, E6-0 · **Size:** M
 
@@ -1284,7 +1284,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E8-2\] Postgres/Redis health-check breakers**
+### **\[E8-2\] Postgres/Redis health-check breakers**
 
 **Epic:** E8 · **Depends on:** E8-1, E1-5 · **Size:** M
 
@@ -1314,7 +1314,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E8-3\] Recovery probes (P2-1)**
+### **\[E8-3\] Recovery probes (P2-1)**
 
 **Epic:** E8 · **Depends on:** E8-0 · **Size:** M
 
@@ -1346,7 +1346,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E8-4\] Outage integration test**
+### **\[E8-4\] Outage integration test**
 
 **Epic:** E8 · **Depends on:** E8-1, E8-2, E8-3, E5-10 · **Size:** L
 
@@ -1381,7 +1381,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 *Placement (O13, ruled): settings hosted in the gateway at `/settings/**`, installations-table slice only — no code path to `reviews`/`dlq_entries`. KMS least-privilege: gateway `kms:GenerateDataKey` only, workers `kms:Decrypt` only (IAM in E11-1). Postgres down ⇒ `/settings` 503s while webhook ingestion is unaffected.*
 
-### **\[ \] \[E9-0\] Settings authentication: OAuth \+ installation-admin \+ signed state (D-3)**
+### **\[E9-0\] Settings authentication: OAuth \+ installation-admin \+ signed state (D-3)**
 
 **Epic:** E9 · **Depends on:** E3-3, E1-5 · **Size:** M
 
@@ -1410,7 +1410,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E9-1\] Settings page: key validation, storage, rotation, model**
+### **\[E9-1\] Settings page: key validation, storage, rotation, model**
 
 **Epic:** E9 · **Depends on:** E9-0, E5-3, E5-0, E5-10 · **Size:** M
 
@@ -1441,7 +1441,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E9-2\] `.reviewbot.yml` loader \+ `ghcfg` cache**
+### **\[E9-2\] `.reviewbot.yml` loader \+ `ghcfg` cache**
 
 **Epic:** E9 · **Depends on:** E5-6, E5-1, E5-2, E8-0 · **Size:** M
 
@@ -1472,7 +1472,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E9-3\] Incremental review (§7.8)**
+### **\[E9-3\] Incremental review (§7.8)**
 
 **Epic:** E9 · **Depends on:** E5-6, E5-1, E5-0, E5-10 · **Size:** L
 
@@ -1506,7 +1506,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 # **E10 — Observability**
 
-### **\[ \] \[E10-0\] Telemetry completion: remaining metrics, traces, JSON logs**
+### **\[E10-0\] Telemetry completion: remaining metrics, traces, JSON logs**
 
 **Epic:** E10 · **Depends on:** E5-9b, E6-1, E7-0, E8-2 · **Size:** L — *pre-authorized in-flight split at the metrics | traces+logs seam if the session runs long*
 
@@ -1536,7 +1536,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E10-1\] Grafana dashboards as code**
+### **\[E10-1\] Grafana dashboards as code**
 
 **Epic:** E10 · **Depends on:** E10-0, E2-2 · **Size:** M
 
@@ -1565,7 +1565,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E10-2\] Alert rules**
+### **\[E10-2\] Alert rules**
 
 **Epic:** E10 · **Depends on:** E10-0 · **Size:** M
 
@@ -1599,7 +1599,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 # **E11 — Deploy**
 
-### **\[ \] \[E11-0\] Container images \+ EKS manifests**
+### **\[E11-0\] Container images \+ EKS manifests**
 
 **Epic:** E11 · **Depends on:** E2-1, E9-1, E10-0 · **Size:** L
 
@@ -1634,7 +1634,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E11-1\] AWS foundation (Terraform)**
+### **\[E11-1\] AWS foundation (Terraform)**
 
 **Epic:** E11 · **Depends on:** E2-4 · **Size:** L
 
@@ -1667,7 +1667,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 ---
 
-### **\[ \] \[E11-2\] Runbook, cutover checklist \+ README**
+### **\[E11-2\] Runbook, cutover checklist \+ README**
 
 **Epic:** E11 · **Depends on:** E11-0, E11-1, E10-2 · **Size:** M
 

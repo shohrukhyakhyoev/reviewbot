@@ -9,24 +9,40 @@ This file holds only what cannot be inferred from the code or the spec.
 1. **Read the ticket, then the spec sections it names**, before writing code. Never
    implement from memory of this file. On any ticket-vs-spec conflict, **the spec
    wins** — say so rather than silently choosing.
-2. **Given a ticket ID, locate only that ticket's section** in
-   `tickets/v1-backlog.md` (search for its header). Never read the whole backlog —
-   it is ~60 pages. The ticket plus its listed spec sections are the complete input.
+2. **Load a ticket with `/ticket <ID>`** (or `python scripts/claude/ctx.py bundle <ID>`):
+   it prints the ticket plus every spec section it cites, verbatim. Never read
+   `docs/spec.md` (~45 pages) or `tickets/v1-backlog.md` (~60 pages) whole — a hook
+   asks first. More spec text: `ctx.py spec <§>` or `ctx.py grep <term>`. The ticket
+   plus its listed spec sections are the complete input.
 3. **Stay in scope.** Build what the ticket asks, nothing more. Something out of
    scope that needs doing → note it in `PROGRESS.md` under "Deferred/noticed".
 4. **Never weaken a test to make it pass.** Fix the code, or explain why the test is
    wrong before changing it.
-5. **Update `PROGRESS.md` at the end of every ticket** — what was built, decisions
-   the next session must respect, anything noticed. Sessions start cold; this file
-   is the memory.
+5. **Close every ticket with `/close`** — it gates on build, acceptance criteria,
+   review, notes and teach-back, then updates `PROGRESS.md` (what was built, decisions
+   the next session must respect, anything noticed) and `tickets/status.md`. Sessions
+   start cold; PROGRESS.md and `.claude/worklog/<ID>.md` are the memory.
+
+## Ticket modes (Mode column of `tickets/status.md` — the human's decision, never change it)
+
+| Mode | Who writes the code | Output style | Claude's job |
+|---|---|---|---|
+| Delegate | Claude | default | short plan → human's go → implement → `scripts/claude/verify.py`; human reviews + `/code-review` |
+| Pair | Claude scaffolds; the human writes every `TODO(human)` | `Learning` | small steps; stop at each decision-bearing point (orderings, validation, compares, transitions) |
+| Own | the human — production code AND tests | `coach` | questions, `/hint` ladder (L0–L4, never the answer), `/review-mine`; **no code** — a hook blocks edits under `src/` |
+
+Session loop: SessionStart injects the current ticket, mode and worklog → work →
+`/handoff` before ending a session → `/review-mine` (Pair/Own) → `/notes` → `/close`.
+Build check with `python scripts/claude/verify.py` (summarized output, full log in `target/`).
 
 ## Tech stack (do not substitute)
 
 - **Java 21** — virtual threads, `ReentrantLock`. No Java 24+ features (JEP 491's
   synchronized-pinning fix does not apply here).
 - **Spring Boot 3.x**, **Maven** multi-module (parent POM + `shared`,
-  `webhook-gateway`, `review-worker`, `retry-worker`, `infra`). Versions and plugins
-  managed in the parent POM, never repeated in children. Build: `./mvnw clean verify`.
+  `webhook-gateway`, `review-worker`, `retry-worker`; `infra/` is a plain directory,
+  not a module). Versions and plugins managed in the parent POM, never repeated in
+  children. Build: `./mvnw clean verify`.
 - **PostgreSQL 16** (Flyway), **Redis 7** (Redisson), **Apache Kafka** (plain
   `KafkaConsumer`/`KafkaProducer` — the parallel consumer is HAND-BUILT; do not add
   Confluent Parallel Consumer).
@@ -113,11 +129,18 @@ shared/                  envelope, DLQ envelope, PrKey + Redis key builders, hea
 webhook-gateway/         HMAC verify, delivery dedup, produce, /settings/**
 review-worker/           parallel consumer engine + review pipeline + DLQ indexer + admin
 retry-worker/            delay-aware retry consumer (calls the same core)
-infra/                   docker-compose, Flyway migrations, k8s manifests, dashboards
+infra/                   docker-compose, Flyway migrations, k8s manifests, dashboards (plain dir)
 docs/spec.md             design specification v1.2 — source of truth for behavior
+docs/spec-map.md         topic → § → ticket index (navigation only; no spec content)
 docs/workflow.md         how the human runs a ticket (not instructions for you)
-tickets/v1-backlog.md    54 V1 tickets in dependency order — read ONLY the named ticket
-PROGRESS.md              build journal — read at session start, update at ticket end
+docs/claude-setup-plan.md  Claude Code setup decisions (approved 2026-11-12)
+docs/adr/                implementation decision records — human-written
+docs/learning/           ticket → required notes mapping, note templates, Notion-offline inbox
+tickets/v1-backlog.md    54 V1 tickets in dependency order — load via /ticket, never whole
+tickets/status.md        ticket board: mode, state, hours — the single source of ticket state
+PROGRESS.md              build journal — current state injected at session start; /close updates it
+scripts/claude/          ctx.py (ticket/spec extractor), verify.py (build summary), selftest.py
+.claude/                 settings + hooks, skills, java-mentor agent, coach style, worklog/<ID>.md
 ```
 
 ## Local dev
@@ -125,3 +148,10 @@ PROGRESS.md              build journal — read at session start, update at tick
 Single-broker KRaft cannot host RF=3 / min.insync.replicas=2. Local compose uses
 RF=1, ISR=1; production (k8s/MSK) uses RF=3 / ISR=2. Don't chase phantom
 `NOT_ENOUGH_REPLICAS` errors locally.
+
+## Compact instructions
+
+When compacting, preserve: the current ticket ID and mode; sub-steps done and next;
+hint level per sub-problem; failing test names and their causes; decisions made this
+session and ADR candidates; files changed. Drop ticket/spec text and build logs —
+they reload via `ctx.py` and `verify.py`.

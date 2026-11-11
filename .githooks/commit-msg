@@ -1,0 +1,5 @@
+#!/bin/sh
+# Ticket close gate (docs/workflow.md). Activate once per clone: git config core.hooksPath .githooks
+# Only commits whose subject starts with a ticket ID ("E4-0: ...") are checked; use "wip(E4-0): ..."
+# for intermediate commits. Bypass deliberately with --no-verify.
+exec python "$(git rev-parse --show-toplevel)/.githooks/commit_msg.py" "$1"

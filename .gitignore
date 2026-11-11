@@ -12,3 +12,8 @@ target/
 *.log
 .DS_Store
 .claude/settings.local.json
+
+# Claude Code setup: per-machine state and the Notion-offline note inbox
+.claude/state/
+docs/learning/inbox/
+__pycache__/

@@ -1,9 +1,11 @@
 # PROGRESS.md — reviewbot build journal
 
-**Read this at the start of every session. Update it at the end of every ticket.**
-This file is how sessions stay oriented — Claude Code has no memory between sessions, so this is the memory.
+**The SessionStart hook injects "Current state"; every `/ticket` bundle injects "Key decisions log". `/close` updates this file.**
+This file is how sessions stay oriented — Claude Code has no memory between sessions, so this is the memory
+(plus `.claude/worklog/<ID>.md` within a ticket). Ticket state and mode live in `tickets/status.md`.
 
-Keep entries short and factual. Newest at the top of "Completed". The point is orientation, not prose.
+Keep entries short and factual. Newest at the top of "Completed"; keep the **last 5** here and move older
+entries verbatim to the top of `docs/progress-archive.md`. The point is orientation, not prose.
 
 ---
 
@@ -11,14 +13,17 @@ Keep entries short and factual. Newest at the top of "Completed". The point is o
 
 - **Phase:** E2 — Infra & scaffold.
 - **Last ticket completed:** E2-2 (local compose stack).
-- **Next ticket:** E2-3 (Flyway V1 migration). Execution order is E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → … (E1 depends on E2-0).
+- **Next ticket:** E2-3 (Flyway V1 migration, mode Delegate). Execution order and modes: `tickets/status.md` (`python scripts/claude/ctx.py next`).
+- **Claude Code setup:** done 2026-11-12 (`docs/claude-setup-plan.md`, branch `claude-setup`). December target (plan option C): E5-10 green locally by 2026-12-31; first simple deploy 2027-01-01…10.
 - **Build status:** `./mvnw clean verify` green locally (after E2-2; CI green as of E2-1, PR #2) — 5 reactor modules, 3 tests.
 
 ---
 
 ## How to update this file (instructions for the agent)
 
-At the end of each ticket, add a "Completed" entry with: ticket ID, one line on what was built, any decision a future session must respect, and any new file/module of note. Update the "Current state" block. If you noticed something out of scope, add it to "Deferred/noticed". Do not delete history.
+At the end of each ticket `/close` (only after its gates pass) adds a "Completed" entry with: ticket ID, one line on what was built, any decision a future session must respect, any new file/module of note, hours, and the Learning line. It updates the "Current state" block. If you noticed something out of scope, add it to "Deferred/noticed". Do not delete history — archive it (`docs/progress-archive.md`).
+
+The `- Learning:` line is checked by the commit-msg hook on `E?-?: …` commits: no `[ ]` left, and `teach-back: pass`.
 
 ---
 
@@ -30,6 +35,8 @@ At the end of each ticket, add a "Completed" entry with: ticket ID, one line on 
 - Decisions: anything that constrains future work (e.g. "chose X over Y because Z").
 - Files/modules: notable additions.
 - Tests: what's covered.
+- Hours: est X / actual Y (Y = sum of the worklog's session lines, confirmed by the human).
+- Learning: [x] concept:<slug> (<link>) · [x] tech:<slug> (<link>) · [x] adr:<NNNN or n/a> · teach-back: pass (k/N)
 -->
 
 ### [E2-2] Local compose stack — 2026-10-15
@@ -60,6 +67,7 @@ Decisions that affect more than the ticket that made them. Keep it tight.
 - **Maven wrapper, not system Maven (E2-0):** no `mvn` on the dev machine, so the build is driven by a committed wrapper (`mvnw`, script-only distribution — no jar committed) pinning **Maven 3.9.9**. Build command is `./mvnw clean verify` (`.\mvnw.cmd` on Windows) wherever CLAUDE.md says `mvn clean verify`. E2-1's CI should invoke `./mvnw` for the same pinning.
 - **LF line endings (E2-0):** Spotless is configured `<lineEndings>UNIX</lineEndings>` and `.gitattributes` sets `* text=auto eol=lf`. Without this the format check passes on Linux CI and fails on Windows dev machines (it did, once). `*.cmd`/`*.bat` stay CRLF.
 - **Version pinning lives in the parent only (E2-0):** Spring Boot's BOM pins Jackson, Flyway, the Postgres driver and Testcontainers; the parent adds explicit pins for `kafka-clients` 3.8.1, `redisson` 3.35.0, `resilience4j-bom` 2.2.0, `wiremock-standalone` 3.9.2 (shaded, keeps WireMock's Jetty off the app classpath). Child POMs carry **no** versions.
+- **Claude Code workflow (setup, 2026-11-12):** ticket state + mode live only in `tickets/status.md` (backlog headers carry no markers); load tickets via `/ticket` / `scripts/claude/ctx.py`, never the whole spec/backlog. Own-mode tickets: Claude never writes code (hook-enforced under `src/`).
 - **JaCoCo measures, gates enforced (E2-0 → E2-1):** `prepare-agent` + `report` run in every module with `**/*Application.class` excluded. E2-1 added the gates: engine rule (≥ 0.95 branch per class in `dev.reviewbot.worker.engine.*`) via `jacoco-check-engine` in the parent POM, and overall ≥ 80% line via `.github/scripts/coverage-gate.sh` in CI. **E4 must put engine classes in that package or the rule silently matches nothing.**
 
 ---
@@ -75,6 +83,7 @@ Things spotted mid-work that belong to a later tier/epic. Record, don't build.
 - **`shared` is a plain jar with no Spring dependency.** Spec §2 puts `processReview(event, attemptContext)` in `shared`; when E5 lands it, decide then whether `shared` needs `spring-context` (optional scope) or whether the seam stays framework-free. Not a decision for E2-0.
 - **`infra/verify-stack.sh` needs mode 100755 in git** — Windows checkouts don't carry the exec bit; stage with `git add --chmod=+x infra/verify-stack.sh` (same as `coverage-gate.sh`).
 - **No Kafka healthcheck beyond "broker answers"** — compose doesn't verify the topic set; that's E2-4's job. WireMock's healthcheck tries `curl` then `wget` (unverified which the image provides; it passes either way).
+- **Learning backfill (human, no deadline pressure):** notes for already-closed tickets per `docs/learning/ticket-notes.md` — E2-1 → concept `cicd-pipeline` + tech `github-actions`; E2-2 → concept `containers` + tech `docker`. Write them `lite` whenever a Delegate ticket leaves spare time.
 - **Failsafe is configured in `pluginManagement` but not activated in any module** — it binds itself when a module first declares it, from E4/E5 integration tests onward.
 
 ---

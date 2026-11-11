@@ -1,0 +1,12 @@
+{
+  "_comment": "Notion targets for /notes and /close. Pages are matched by the Slug property. Status 'lite' or 'understood' passes the close gate. If Notion is unreachable, notes go to docs/learning/inbox/<slug>.md (notion: pending) and '/notes sync' uploads them later.",
+  "parent_page_url": "https://app.notion.com/p/3f6997ba8e7c818fb5d9dbe30b2641a0",
+  "concepts_database_id": "c2af7bf758a84eb784915839b970bf9b",
+  "concepts_data_source": "collection://77021150-26f4-481a-91bd-58214e0577c7",
+  "tech_database_id": "4471eed32c9a49fdabc32a3331b81b6c",
+  "tech_data_source": "collection://75f6f7a6-cbe2-4d07-bf32-01a9bcfadb26",
+  "properties": {
+    "concepts": ["Name", "Slug", "Status", "Roadmap area", "Tickets", "Tech", "Last reviewed"],
+    "tech": ["Name", "Slug", "Status", "Version", "Tickets", "Concepts", "Last reviewed"]
+  }
+}
