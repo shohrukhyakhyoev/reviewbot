@@ -41,8 +41,13 @@ Build check with `python scripts/claude/verify.py` (summarized output, full log 
 notes, or the human chooses between ≥ 2 viable options the spec didn't dictate, end your reply with ONE line:
 `note-worthy: <what> → concept note <slug>` / `→ tech page <slug>` / `→ ADR candidate`. Don't stop the work,
 don't repeat a nudge in the same session, and add ADR candidates to the worklog's "Decisions pending".
-**Never write or rewrite a note's content.** Notes and ADRs are the human's; `/notes check <slug>` reviews them
-with questions only.
+**Notes are written in chat, in the human's words** (`/notes write <slug>`, no Notion round-trip). Claude
+interviews (one question at a time, guiding with questions and pointers, never the answer); the human answers in
+their own words; Claude may fix **only grammar, spelling, word choice and structure**, then writes the result to
+the note (Notion first, inbox fallback). **Claude adds no ideas**: no facts, examples, analogies or explanations the
+human did not say. A wrong, vague or missing answer gets a follow-up question, never a silent fix or a filled-in
+sentence. Claude decides when a note meets its bar (`lite`/`understood`) and sets the status. **ADRs stay
+human-written**; `/notes check <slug|ADR file>` reviews a note or ADR with questions only.
 
 ## Tech stack (do not substitute)
 

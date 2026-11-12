@@ -1,7 +1,7 @@
 ---
 name: notes
-description: Show which concept notes, tech pages and ADR the current ticket requires and whether each exists (Notion, or the local inbox fallback). Scaffold missing ones, check a note the human wrote against its template, or sync inbox notes to Notion.
-argument-hint: "[status | scaffold <slug> | check <slug or ADR file> | sync]"
+description: Show which concept notes, tech pages and ADR the current ticket requires and whether each exists (Notion, or the local inbox fallback). Scaffold missing ones, write a note by interviewing the human in chat (their words, grammar-polished only), check a note or ADR against its template, or sync inbox notes to Notion.
+argument-hint: "[status | scaffold <slug> | write <slug> | check <slug or ADR file> | sync]"
 disable-model-invocation: true
 ---
 
@@ -14,9 +14,11 @@ Inbox fallback (`docs/learning/inbox/`): !`ls "${CLAUDE_PROJECT_DIR}/docs/learni
 
 ---
 
-Rules: `docs/learning/ticket-notes.md`. Templates: `docs/learning/templates/`. **The human writes every
-explanation.** You may only create the page/file skeleton and fill properties plus the "Where it shows
-up" row for this ticket, with real file:line found by grepping the code.
+Rules: `docs/learning/ticket-notes.md`. Templates: `docs/learning/templates/`. **Every idea in a note is the
+human's.** `scaffold` creates only the skeleton, properties and the "Where it shows up" row (real file:line found
+by grepping the code). `write` is the interview that fills the rest: the human answers in chat in their own
+words, and you may fix only grammar, spelling, word choice and structure. Never add a fact, example, analogy or
+explanation the human did not say. ADRs are not written by you (use `check`).
 
 ## Where to look
 - **Notion first:** load the Notion tools with ToolSearch (`notion query data sources`, `notion fetch`,
@@ -38,8 +40,38 @@ Create the Notion page (or inbox file) from the matching template with status `d
 frontmatter/properties and one "Where it shows up" row. Leave every other section with its template
 prompt. If the note already exists, append only the new "Where it shows up" row.
 
+## `write <slug>`
+Interview the human and write the note from their answers. Concept notes and tech pages only.
+1. **Get the note.** Find it (Notion by Slug, or the inbox file). Missing → run `scaffold` first. Fetch it, read the
+   matching template, and list the sections still holding template prompts (angle-bracket placeholders). Work in
+   this order: **lite sections first**: tech page: "What problem it solves here", "Mental model", this ticket's
+   "How reviewbot uses it" cells (Value, Why), one interview question + answer; concept note: "In my own words",
+   "Where it shows up" prose, one interview question + answer. Then, only if the human wants `understood`, the
+   remaining sections. Tell the human the plan in one line ("5 questions to lite").
+2. **Ask one question at a time**, grounded in this ticket (name the file:line or spec § to look at, never the
+   answer). Wait for the human's answer in chat. If they have forgotten a term, point to where to look (spec §,
+   file:line, their earlier answer) and let them try again; after two failed tries give a one-line conceptual
+   nudge in prose, still not a sentence they can paste.
+3. **Fact-check the answer** against the spec (`ctx.py spec <§>` / `ctx.py grep <term>`), the code, and the
+   contracts it names (spec wins). Wrong, vague or missing → ask a follow-up question that makes them find it
+   (same style as `check`: `[wrong|vague|missing] <question>`), at most two rounds. Do not write that part.
+   Still unresolved → leave the section as the template prompt and keep the status `draft`. Never fill the gap.
+4. **Polish, then write.** Fix grammar, spelling, punctuation, word choice, and turn chat fragments into
+   sentences or table cells. Keep their meaning, first person, vocabulary level and amount of detail; do not
+   merge in your own phrasing of ideas. If a fix would change what they meant, ask. Write the section to the
+   note (`update-page`, targeted `update_content`; batch the lite sections of one answer round into one write to
+   keep approvals few), then show the exact text you wrote in one short block and say: "Written to <section>.
+   Tell me if I shifted your meaning." Apply their correction the same way.
+5. **Decide done.** When every lite requirement is filled from the human's own answers, nothing is left wrong or
+   vague, and "Where it shows up" names this ticket ID with a real file:line (open the file and look), set
+   Status `lite` and Last reviewed to today, and say "Notes writing done: `<slug>` is `lite`". Set `understood`
+   only when every template section is filled and verified. If the bar is not met, say which sections are missing
+   and stay `draft`. Do not mark done to be nice.
+6. Notion unreachable → write `docs/learning/inbox/<slug>.md` instead (`notion: pending`) and say so.
+
 ## `check <slug>` (or `check docs/adr/NNNN-*.md`)
-Review a note **the human wrote**. **Read-only: never edit, append to or rewrite the note**, not even a typo.
+Review a note or ADR **the human wrote**. **Read-only: never edit, append to or rewrite it**, not even a typo
+(use `write` to have a note written from interview answers).
 1. **Get the text.** Notion page by Slug (fetch it), or the inbox file, or the ADR file. If none is reachable,
    ask the human to paste it.
 2. **Template conformance.** Compare it against `docs/learning/templates/concept-note.md`, `tech-page.md` or
@@ -59,8 +91,8 @@ Review a note **the human wrote**. **Read-only: never edit, append to or rewrite
    "Your Mechanism says the permit is released on success only. What happens to it in E4-0 when markComplete
    hits an unregistered partition?" or "Where in your code does this show up? The row has no file:line."
    Don't quote a correct version, and don't write replacement sentences.
-   End with: "Status claim `<lite|understood>`: supported / not yet supported". The human changes the status
-   themselves.
+   End with: "Status claim `<lite|understood>`: supported / not yet supported". In `check` the human changes
+   the status themselves (only `write` lets you set it).
 
 ## `sync`
 For each inbox file with `notion: pending`, create the Notion page with its content, then set
