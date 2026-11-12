@@ -26,7 +26,26 @@ check() {
   fi
 }
 
+# One-shot init services (kafka-init) may still be running when `up --wait` returns: a
+# container without a healthcheck counts as ready the moment it starts. Retry for up to 30 s.
+check_eventually() {
+  local name="$1" i
+  shift
+  for i in $(seq 1 15); do
+    if "$@" >/dev/null 2>&1; then
+      echo "OK    $name"
+      return
+    fi
+    sleep 2
+  done
+  echo "FAIL  $name"
+  failed=1
+}
+
 check "kafka    (list topics)" \
+  "${COMPOSE[@]}" exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:19092 --list
+check_eventually "kafka    (3 topics provisioned)" \
+  bash -c "[ \"\$(\"\$@\" | grep -cxF -e pr.review.requested -e pr.review.retry -e pr.review.dlq)\" = 3 ]" _ \
   "${COMPOSE[@]}" exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:19092 --list
 check "postgres (SELECT 1)" \
   "${COMPOSE[@]}" exec -T postgres psql -U reviewbot -d reviewbot -tAc "SELECT 1"
