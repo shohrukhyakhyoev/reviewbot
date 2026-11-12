@@ -14,7 +14,7 @@ entries verbatim to the top of `docs/progress-archive.md`. The point is orientat
 - **Phase:** E2 — Infra & scaffold.
 - **Last ticket completed:** E2-2 (local compose stack).
 - **Next ticket:** E2-3 (Flyway V1 migration, mode Delegate). Execution order and modes: `tickets/status.md` (`python scripts/claude/ctx.py next`).
-- **Claude Code setup:** done 2026-11-12 (`docs/claude-setup-plan.md`, branch `claude-setup`). December target (plan option C): E5-10 green locally by 2026-12-31; first simple deploy 2027-01-01…10.
+- **Claude Code setup:** done 2026-11-12 (`docs/claude-setup-plan.md`, branch `claude-setup`). December target (plan option C): E5-10 green locally by 2026-12-31. **First deploy (human's decision, 2026-11-12): after E5 + E6 + E8** (~2027-01-20…25), simple-first (Docker + GitHub Actions + AWS, single host); E7, E9, E10 after the deploy; EKS/Terraform (E11) later.
 - **Build status:** `./mvnw clean verify` green locally (after E2-2; CI green as of E2-1, PR #2) — 5 reactor modules, 3 tests.
 
 ---
