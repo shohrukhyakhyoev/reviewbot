@@ -20,6 +20,11 @@ The bundle above is the **complete input** for this ticket (CLAUDE.md working ru
 - Unresolved references listed in the bundle: resolve them with `ctx.py grep` and say what you found.
 - Output style: the mode expects the style shown in the bundle. If the session's style differs
   (SessionStart warns), ask the human to run `/output-style <style>`. You cannot switch it yourself.
+- Model: the bundle names the recommended session model (Opus for Own, Sonnet for Delegate/Pair). If it differs,
+  tell the human to switch with `/model`.
+- **Notes this ticket requires** (from the bundle's "Required notes"): list each one on a line, e.g.
+  `concept concurrency-semaphore (new) · tech kafka (append section)`, plus whether an ADR is required or
+  conditional. If there are none, say "no notes required".
 
 ## 2. Book-keeping
 - In `tickets/status.md` set this ticket's **State** cell to `wip` (never touch the Mode cell).
@@ -39,5 +44,6 @@ The bundle above is the **complete input** for this ticket (CLAUDE.md working ru
   `/handoff` at the end of the session.
 
 ## 4. Notes
-List the required notes from the bundle. Suggest `/notes` once the first code exists, so the
-"Where it shows up" rows can carry real file:line references.
+Suggest `/notes scaffold <slug>` once the first code exists, so the "Where it shows up" rows can carry real
+file:line references. While working, follow CLAUDE.md's note-nudge rule. After the human writes a note,
+`/notes check <slug>` reviews it against its template.

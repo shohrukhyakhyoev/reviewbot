@@ -212,6 +212,11 @@ def main() -> int:
         add = out.get("hookSpecificOutput", {}).get("additionalContext", "")
         expect("SessionStart injects current ticket", "ok" if "E1-0" in add and "Pair" in add else "missing", "ok")
 
+        expect("notes: Claude edits an ADR", guard("Edit", {"file_path": p("docs", "adr", "0001-use-jqwik.md"), "old_string": "a", "new_string": "b"}), "ask")
+        expect("notes: Claude writes an inbox note", guard("Write", {"file_path": p("docs", "learning", "inbox", "solid.md"), "content": "x"}), "ask")
+        expect("notes: Claude updates a Notion page", guard("mcp__claude_ai_Notion__notion-update-page", {"page_id": "x", "command": "replace_content"}), "ask")
+        expect("notes: ADR index README stays editable", guard("Edit", {"file_path": p("docs", "adr", "README.md"), "old_string": "a", "new_string": "b"}), "allow")
+
         review_cycle()
 
         # ctx.py: every ticket's spec references resolve

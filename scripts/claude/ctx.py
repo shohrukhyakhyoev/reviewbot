@@ -63,6 +63,7 @@ FINDINGS_SEP = "|---|---|---|---|---|---|---|---|"
 
 ID_RE = re.compile(r"(?i)\bE(\d+)-(\d+)([ab]?)\b")
 EXPECTED_STYLE = {"Own": "coach", "Pair": "Learning", "Delegate": "(any; default fine)"}
+MODEL_FOR_MODE = {"Own": "Opus", "Pair": "Sonnet", "Delegate": "Sonnet"}
 TEACH_BACK = {"Own": 5, "Pair": 3, "Delegate": 1}
 MODE_RULES = {
     "Own": (
@@ -713,6 +714,8 @@ def cmd_bundle(tid, set_cur):
                f"Phase: {row.get('Phase', '?')} · Est: {row.get('Est h', '?')} h")
     out.append(f"- Depends on: {deps}" + ("" if deps_ok else "  ⚠ NOT ALL DONE: stop and tell the human."))
     out.append(f"- Expected output style: {SPLIT_STYLE if split else EXPECTED_STYLE.get(mode, '?')}")
+    out.append(f"- Recommended session model: {MODEL_FOR_MODE.get(mode, '?')} (switch with /model; "
+               "/review-mine always runs on Opus)")
     out.append(f"- Mode rules: {SPLIT_RULES.format(scope=scope) if split else MODE_RULES.get(mode, 'unknown mode: ask the human')}")
     if set_cur:
         out.append(f"- Current ticket set to {tid}" + (f"; worklog created at .claude/worklog/{tid}.md" if created else ""))

@@ -16,6 +16,17 @@ This file is for the human. Claude's rules are in CLAUDE.md, and the reasoning b
 4. `/ticket E4-0`. Claude gets the ticket, every spec section it cites, the key decisions and required
    notes. It sets the ticket as current and creates `.claude/worklog/E4-0.md`.
 
+**Model:** Opus for Own tickets, Sonnet for Delegate and Pair (`/model`). The bundle names the right one, and
+`/review-mine` always runs on Opus.
+
+**Notes flow:**
+- At start, `/ticket` lists the notes this ticket needs.
+- While you work, Claude adds a one-line `note-worthy: … → concept note <slug>` or `→ ADR candidate` when it
+  fits. It's a nudge, not a stop.
+- After you write a note, `/notes check <slug>` reads it (Notion, inbox, or paste it in). It checks it against
+  the template, the spec and your code, and replies with questions only. It never writes the note.
+- At close, the `/close` gate checks status and the ticket link.
+
 ## During the ticket, by mode
 | Mode | You | Claude |
 |---|---|---|

@@ -63,6 +63,7 @@ def main() -> int:
                             f"then /output-style coach for the core (current: '{have}').")
         elif not split and want and have != want:
             warnings.append(f"{tid} is {mode} mode but the output style is '{have}'. Run: /output-style {want}")
+        ctx_lines.append(f"Required notes for {tid} (for the note-nudge rule in CLAUDE.md):\n{ctx.notes_text(tid)}")
         wl = ctx.read(ctx.worklog_path(tid))
         if wl:
             m = re.search(r"^fingerprint:\s*(\S+)", wl, re.M)

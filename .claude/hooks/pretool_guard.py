@@ -10,6 +10,7 @@ Turns written rules into checks. deny beats ask; silence means the normal permis
   5. Changing a Mode or Own scope cell in tickets/status.md (the human owns them)           ask
   6. Test-weakening tripwire: @Disabled/assumptions added, @Test removed, fewer assertions,
      CI/coverage gate edits, skip flags, deleting test files                                ask
+  7. Claude writing a note or ADR (docs/adr/NNNN-*, docs/learning/inbox/*, Notion page create/update) ask
 Fails open with a stderr notice (exit 1 = non-blocking) if the guard itself crashes.
 """
 from __future__ import annotations
@@ -218,6 +219,14 @@ def check(data: dict) -> list[tuple[str, str]]:
         if changed:
             found.append(("ask", f"This edit changes a ticket's Mode or Own scope in tickets/status.md "
                                  f"({', '.join(changed)}). Those are the human's decision."))
+
+    # 7. notes and ADRs are the human's: Claude writing one needs the human's approval (scaffold/sync only)
+    if tool in FILE_TOOLS and (re.fullmatch(r"docs/adr/\d{4}-[^/]+\.md", path) or path.startswith("docs/learning/inbox/")):
+        found.append(("ask", f"{path} is a human-written note/ADR. Approve only a scaffold or sync you asked for, "
+                             "never note content written by Claude."))
+    if tool.startswith("mcp__") and "otion" in tool and re.search(r"create-pages|update-page", tool):
+        found.append(("ask", "Claude is about to write to Notion. Approve only a /notes scaffold or sync you asked "
+                             "for, never note content written by Claude."))
 
     # 6. test-weakening tripwire
     if tool in FILE_TOOLS and path.endswith(".java") and is_test_file(path):

@@ -32,9 +32,16 @@ This file holds only what cannot be inferred from the code or the spec.
 | Own | the human — production code AND tests | `coach` | questions, `/hint` ladder (L0–L4, never the answer), `/review-mine`; test cases as a list only; **no code** — a hook blocks edits under `src/` |
 | Own, split (Own scope = package list, e.g. E5-9a `**/finalize/**`) | the human writes those packages + their tests; Claude the wiring outside | `Learning` → `coach` | wiring first, then coach; the hook blocks edits inside the listed packages |
 
-Session loop: SessionStart injects the current ticket, mode and worklog → work →
+Session loop: SessionStart injects the current ticket, mode, required notes and worklog → work →
 `/handoff` before ending a session → `/review-mine` (Pair/Own) → `/notes` → `/close`.
 Build check with `python scripts/claude/verify.py` (summarized output, full log in `target/`).
+
+**Note nudge (all modes):** when the work touches a concept or technology from the current ticket's required
+notes, or the human chooses between ≥ 2 viable options the spec didn't dictate, end your reply with ONE line:
+`note-worthy: <what> → concept note <slug>` / `→ tech page <slug>` / `→ ADR candidate`. Don't stop the work,
+don't repeat a nudge in the same session, and add ADR candidates to the worklog's "Decisions pending".
+**Never write or rewrite a note's content.** Notes and ADRs are the human's; `/notes check <slug>` reviews them
+with questions only.
 
 ## Tech stack (do not substitute)
 

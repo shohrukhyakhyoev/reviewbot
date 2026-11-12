@@ -421,3 +421,18 @@ Approved by the human. Adds to §3 (components) and §4 (close gate).
 - **Pending (human):** allow the mentor's report writes without a prompt by adding `"Edit(.review/**)"` and
   `"Write(.review/**)"` to `.claude/settings.json` › permissions.allow, or answer "don't ask again" at the first prompt.
   Claude can't add it (Claude Code blocks Claude from widening its own permissions).
+
+---
+
+## Amendment 3 (2026-11-12): notes flow, model routing, reviewer on Opus
+
+- **Reviewer pinned:** `java-mentor` runs on `model: opus` regardless of the session model.
+- **Model routing:** Opus sessions for Own tickets, Sonnet for Delegate/Pair (the `/ticket` bundle names it).
+- **Notes flow:**
+  - start: `/ticket` lists the required notes in its summary
+  - during: a one-line `note-worthy: … → concept note <slug> / → ADR candidate` nudge (CLAUDE.md rule, all
+    modes); never stops the work; ADR candidates go to the worklog
+  - after the human writes a note: `/notes check <slug>` checks it against the template, the spec and the
+    code, and replies with questions only
+  - close: the existing gate
+- **Enforced:** the guard asks before Claude writes an ADR, an inbox note, or a Notion page (create/update).
