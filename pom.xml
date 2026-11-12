@@ -138,6 +138,12 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>${maven-surefire-plugin.version}</version>
+          <configuration>
+            <systemPropertyVariables>
+              <!-- Lets tests find the plain infra/ directory regardless of the working directory. -->
+              <reviewbot.migrations.dir>${maven.multiModuleProjectDirectory}/infra/db/migration</reviewbot.migrations.dir>
+            </systemPropertyVariables>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

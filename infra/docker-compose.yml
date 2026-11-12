@@ -61,6 +61,24 @@ services:
       retries: 12
       start_period: 5s
 
+  # Applies infra/db/migration to the local Postgres, then exits. Re-running is a no-op
+  # (Flyway records applied versions in flyway_schema_history). Apps do NOT self-migrate
+  # (ticket E2-3 / O1); in k8s this is a migration Job (E11).
+  flyway:
+    image: flyway/flyway:10.10.0-alpine # same version as the Spring Boot 3.3.5 BOM uses in the tests
+    container_name: reviewbot-flyway
+    command: ["-connectRetries=10", "migrate"]
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/reviewbot
+      FLYWAY_USER: reviewbot
+      FLYWAY_PASSWORD: reviewbot
+    volumes:
+      - ./db/migration:/flyway/sql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   redis:
     image: redis:7-alpine
     container_name: reviewbot-redis

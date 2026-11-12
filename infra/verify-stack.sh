@@ -30,6 +30,9 @@ check "kafka    (list topics)" \
   "${COMPOSE[@]}" exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:19092 --list
 check "postgres (SELECT 1)" \
   "${COMPOSE[@]}" exec -T postgres psql -U reviewbot -d reviewbot -tAc "SELECT 1"
+check "schema   (Flyway V1 applied, 3 tables)" \
+  bash -c "[ \"\$(\"\$@\")\" = 1,3 ]" _ "${COMPOSE[@]}" exec -T postgres psql -U reviewbot -d reviewbot -tAF, -c \
+  "SELECT (SELECT count(*) FROM flyway_schema_history WHERE version = '1' AND success), (SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('reviews', 'installations', 'dlq_entries'))"
 check "redis    (PING)" \
   bash -c "[ \"\$(\"\$@\")\" = PONG ]" _ "${COMPOSE[@]}" exec -T redis redis-cli ping
 check "wiremock (admin endpoint)" \

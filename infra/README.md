@@ -29,6 +29,15 @@ It exits non-zero if any service is unreachable, including when the stack is dow
 
 Named volumes: `kafka-data`, `postgres-data`.
 
+## Database migrations (Flyway)
+
+Migrations live in `infra/db/migration/` (`V<n>__name.sql`). The one-shot `flyway` compose
+service applies pending ones to the local Postgres after it is healthy, then exits; re-running
+is a no-op (applied versions are recorded in `flyway_schema_history`). Never edit an applied
+migration — Flyway's checksum check will refuse to run; add a new `V<n+1>__…` file instead.
+Apps do **not** self-migrate (E2-3 / O1); in k8s a migration Job applies them (E11). The
+schema smoke test (`shared`, `SchemaMigrationTest`) runs the same files against Testcontainers.
+
 ## Local Kafka diverges from production (intentional)
 
 Local compose runs **RF=1 / `min.insync.replicas=1`**. Production (MSK / k8s) runs
@@ -46,5 +55,4 @@ GitHub must reach the webhook-gateway running on your machine. Use a tunnel:
 ## Not here
 
 - Topic creation — E2-4.
-- Flyway migrations — E2-3 (runs at app startup locally; a migration Job in k8s).
 - k8s manifests — E11.
