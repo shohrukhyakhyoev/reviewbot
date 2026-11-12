@@ -3,7 +3,7 @@
 
 Turns written rules into checks. deny beats ask; silence means the normal permission flow.
   1. .claude/state/** is written only by /ticket's render step, never by Claude            deny
-  2. java-mentor subagent: read-only (its own memory dir excepted)                         deny
+  2. java-mentor subagent: read-only (its report file .claude/reviews/<ID>.md excepted)     deny
   3. Own mode: no Claude edits under any src/, or only inside the split ticket's Own scope
      packages (file tools; shell writes best-effort)                                         deny
   4. Full Read of docs/spec.md or tickets/v1-backlog.md (use scripts/claude/ctx.py)         ask
@@ -165,10 +165,11 @@ def check(data: dict) -> list[tuple[str, str]]:
     if tool in SHELL_TOOLS and ".claude/state" in cmd.replace("\\", "/") and writes:
         found.append(("deny", ".claude/state/ is written only by the human's /ticket invocation, never by Claude."))
 
-    # 2. java-mentor is read-only
+    # 2. java-mentor is read-only except for its report file
     if agent == "java-mentor":
-        if tool in FILE_TOOLS and not path.startswith(".claude/agent-memory/java-mentor/"):
-            found.append(("deny", "java-mentor is a read-only reviewer; it may write only its own memory directory."))
+        if tool in FILE_TOOLS and not re.fullmatch(r"\.claude/reviews/E\d+-\d+[ab]?\.md", path):
+            found.append(("deny", "java-mentor is a read-only reviewer; its only writable file is "
+                                  ".claude/reviews/<ID>.md (the review report)."))
         if tool in SHELL_TOOLS:
             parts = [p for p in re.split(r"&&|\|\||;|\|", cmd_w) if p.strip()]
             if writes or not all(MENTOR_SHELL_OK.match(p) for p in parts):

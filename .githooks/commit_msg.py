@@ -5,6 +5,7 @@ Checks the STAGED versions of PROGRESS.md and tickets/status.md:
   - PROGRESS.md has a "### [E4-0] ..." Completed entry
   - that entry has a "- Learning:" line with no unchecked "[ ]" item and "teach-back: pass"
   - tickets/status.md row for E4-0 has State "done"
+  - .claude/worklog/E4-0.md has no open must-fix / should-fix review finding
 /close writes all of that only after the gate passed. Other commit subjects are not checked.
 """
 from __future__ import annotations
@@ -66,6 +67,19 @@ def main(msg_file: str) -> int:
             break
     if state != "done":
         return fail(f"tickets/status.md (staged) does not mark {tid} as done (State={state}).")
+    # review gate: no open must-fix / should-fix in the worklog's Review findings table
+    wl, on, blocking = staged(f".claude/worklog/{tid}.md"), False, []
+    for l in wl.splitlines():
+        if l.startswith("## "):
+            on = l.startswith("## Review findings")
+            continue
+        cells = [c.strip() for c in l.strip().strip("|").split("|")]
+        if on and len(cells) >= 8 and re.fullmatch(r"R\d+", cells[0]):
+            if cells[1] in ("must-fix", "should-fix") and cells[7] == "open":
+                blocking.append(f"{cells[0]} ({cells[1]})")
+    if blocking:
+        return fail(f"open review findings in .claude/worklog/{tid}.md: {', '.join(blocking)}. "
+                    "Fix them and re-run /review-mine.")
     return 0
 
 

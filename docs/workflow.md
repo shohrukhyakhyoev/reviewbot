@@ -38,8 +38,13 @@ This file is for the human. Claude's rules are in CLAUDE.md, and the reasoning b
 without re-reading anything. A `wip(E4-0): …` commit is fine.
 
 ## Closing a ticket
-1. `/review-mine` (Pair/Own). The java-mentor subagent reviews your code against the ticket's invariants
-   and traps. Fix what it raises, then run it again on the final code.
+1. `/review-mine` (Pair/Own). A fresh-context reviewer (java-mentor) checks correctness (invariants,
+   acceptance criteria), then clean code, design (incl. over-engineering), then testability. Each finding has an ID,
+   severity (must-fix / should-fix / nit), file:line, the principle, and why it matters. There are no hints in the
+   review: `/hint R2` if you want one. Fix, then `/review-mine` again re-reviews. **`/close` and the commit hook stay
+   blocked while any must-fix or should-fix is open.** Declining a nit: `python scripts/claude/ctx.py skip-nit E4-0 R5`.
+   Principles that keep coming up are tallied in `docs/learning/principles.md`; from the second ticket on they're
+   flagged as concept-note candidates.
 2. `/notes`. It shows which concept notes, tech pages and ADR this ticket needs (Notion, or
    `docs/learning/inbox/` when Notion is down), and scaffolds missing ones. **You write the
    explanations.** December minimum = status `lite`.

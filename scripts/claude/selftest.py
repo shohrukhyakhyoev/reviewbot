@@ -52,6 +52,97 @@ def expect(name: str, got: str, want: str) -> None:
     print(f"{'PASS' if ok else 'FAIL'}  {name:46} want={want:5} got={got}")
 
 
+REVIEW_1 = """# Review E97-1 · 2026-11-12 · fingerprint aaaa11112222 · mode Own
+
+## Verdict
+1 must-fix, 1 should-fix, 1 nit
+
+## Status updates
+| ID | Status | Evidence |
+|---|---|---|
+
+## New findings
+| ID | Severity | Stage | Location | Principle | Why it matters here | Owner | Status |
+|---|---|---|---|---|---|---|---|
+| R1 | must-fix | correctness | x/src/main/java/A.java:10 | I3 contiguous watermark | commits past a gap | human | open |
+| R2 | should-fix | design | x/src/main/java/A.java:20 | YAGNI | factory with one product | human | open |
+| R3 | nit | clean-code | x/src/main/java/A.java:30 | Naming | `tmp` says nothing | human | open |
+
+## Principles cited
+| Principle | Registry slug |
+|---|---|
+| YAGNI | — |
+"""
+REVIEW_2 = """# Review E97-1 · 2026-11-12 · fingerprint bbbb33334444 · mode Own
+
+## Status updates
+| ID | Status | Evidence |
+|---|---|---|
+| R1 | fixed | A.java:10 advances only contiguously |
+| R2 | fixed | factory removed |
+
+## New findings
+| ID | Severity | Stage | Location | Principle | Why it matters here | Owner | Status |
+|---|---|---|---|---|---|---|---|
+
+## Principles cited
+| Principle | Registry slug |
+|---|---|
+"""
+
+
+def review_cycle() -> None:
+    """record-review → gate → re-review → skip-nit, all in a temp dir (no repo files touched)."""
+    import contextlib
+    import io
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        wl, pr, rv = d / "wl.md", d / "principles.md", d / "review.md"
+        quiet = lambda f: contextlib.redirect_stdout(io.StringIO())  # noqa: E731
+        rv.write_text(REVIEW_1.replace("| R3 | nit |", "| R3 | trivial |"), encoding="utf-8")
+        with quiet(None):
+            rc = ctx.record_review("E97-1", rv, wl, pr)
+        expect("review: malformed report rejected, nothing written", f"{rc}/{wl.exists()}", "1/False")
+        rv.write_text(REVIEW_1, encoding="utf-8")
+        with quiet(None):
+            ctx.record_review("E97-1", rv, wl, pr)
+        text = wl.read_text(encoding="utf-8")
+        verbatim = all(line in text.splitlines() for line in ctx.parse_review(REVIEW_1)["new"])
+        expect("review: findings copied verbatim", "yes" if verbatim else "no", "yes")
+        expect("review: gate blocked by must/should", ",".join(ctx.review_gate(text)["blocking"]), "R1,R2")
+        rv.write_text(REVIEW_2, encoding="utf-8")
+        with quiet(None):
+            ctx.record_review("E97-1", rv, wl, pr)
+        g = ctx.review_gate(wl.read_text(encoding="utf-8"), "bbbb33334444")
+        expect("re-review: fixed ⇒ gate clear, nit stays open", f"{g['blocking']}/{g['open_nits']}/{g['reviewed_at_fp']}", "[]/['R3']/True")
+        # principle tally: YAGNI cited on a second ticket ⇒ concept-note candidate
+        rv.write_text(REVIEW_1.replace("E97-1", "E98-1").replace("| R1 | must-fix | correctness | x/src/main/java/A.java:10 | I3 contiguous watermark | commits past a gap | human | open |\n", "").replace("| R2 |", "| R1 |").replace("| R3 |", "| R2 |"), encoding="utf-8")
+        with quiet(None):
+            ctx.record_review("E98-1", rv, d / "wl2.md", pr)
+        yagni = next((l for l in pr.read_text(encoding="utf-8").splitlines() if l.startswith("| YAGNI")), "")
+        expect("principles: 2 tickets ⇒ candidate", "yes" if "| 2 | yes" in yagni else yagni, "yes")
+    # commit gate refuses a close commit while a must-fix is open
+    sys.path.insert(0, str(ROOT / ".githooks"))
+    import commit_msg as cm
+    real = cm.staged
+    open_wl = "## Review findings\n| ID | Severity | Stage | Location | Principle | Why | Owner | Status |\n|---|---|---|---|---|---|---|---|\n| R1 | must-fix | correctness | a:1 | I3 | x | human | open |\n"
+    cm.staged = lambda path: ("### [E2-0] x\n- Learning: [x] a · teach-back: pass (1/1)\n" if path == "PROGRESS.md"
+                              else open_wl if path.endswith("E2-0.md") else real(path))
+    import tempfile as _t
+    f = _t.NamedTemporaryFile("w", delete=False, suffix=".txt", encoding="utf-8")
+    f.write("E2-0: close\n")
+    f.close()
+    import contextlib as _c
+    import io as _io
+    with _c.redirect_stderr(_io.StringIO()):
+        rc = cm.main(f.name)
+    os.unlink(f.name)
+    cm.staged = real
+    expect("commit gate: open must-fix blocks close commit", str(rc), "1")
+
+
 def main() -> int:
     saved = ctx.read(ctx.STATE)
     try:
@@ -103,7 +194,8 @@ def main() -> int:
         expect("mentor: git diff && status", guard("Bash", {"command": "git diff HEAD --stat && git status --short"}, "java-mentor"), "allow")
         expect("mentor: verify.py", guard("Bash", {"command": "python scripts/claude/verify.py -pl shared"}, "java-mentor"), "allow")
         expect("mentor: sed -i", guard("Bash", {"command": "sed -i s/a/b/ shared/src/main/java/X.java"}, "java-mentor"), "deny")
-        expect("mentor: write own memory", guard("Write", {"file_path": p(".claude", "agent-memory", "java-mentor", "MEMORY.md"), "content": "x"}, "java-mentor"), "allow")
+        expect("mentor: write its review report", guard("Write", {"file_path": p(".claude", "reviews", "E4-0.md"), "content": "x"}, "java-mentor"), "allow")
+        expect("mentor: write anything else", guard("Write", {"file_path": p(".claude", "worklog", "E4-0.md"), "content": "x"}, "java-mentor"), "deny")
         expect("mentor: edit src", guard("Edit", {"file_path": p("shared", "src", "main", "java", "X.java"), "old_string": "a", "new_string": "b"}, "java-mentor"), "deny")
 
         # SessionStart produces valid JSON with the current ticket
@@ -112,6 +204,8 @@ def main() -> int:
         out = json.loads(r.stdout) if r.returncode == 0 and r.stdout.strip() else {}
         add = out.get("hookSpecificOutput", {}).get("additionalContext", "")
         expect("SessionStart injects current ticket", "ok" if "E1-0" in add and "Pair" in add else "missing", "ok")
+
+        review_cycle()
 
         # ctx.py: every ticket's spec references resolve
         unresolved = [tid for tid, t in ctx.tickets().items() if ctx.resolve_refs(t.get("spec_line", ""))[1]]

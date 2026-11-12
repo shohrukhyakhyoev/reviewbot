@@ -20,6 +20,11 @@ Subcommands
   hint-state [SUB]          current ticket, fingerprint, hint-ladder table
   close-check [ID]          everything /close needs to gate a ticket
   check-all                 resolve every ticket's references; report sizes + unresolved refs
+  findings [ID]             the ticket's review-findings table (what java-mentor re-reviews)
+  record-review [ID]        copy .claude/reviews/ID.md into the worklog VERBATIM + update docs/learning/principles.md
+                            (options --review= --worklog= --principles= override paths; validates first, writes all or nothing)
+  review-gate [ID]          exit 1 while any must-fix/should-fix is open
+  skip-nit [ID] R<n>        mark an open NIT skipped (the human's choice; refuses anything that is not a nit)
 
 Always exits 0 for bundle/hint-state/close-check (skill injection aborts on non-zero).
 """
@@ -47,6 +52,14 @@ NOTES = ROOT / "docs" / "learning" / "ticket-notes.md"
 PROGRESS = ROOT / "PROGRESS.md"
 WORKLOG_DIR = ROOT / ".claude" / "worklog"
 STATE = ROOT / ".claude" / "state" / "current"
+REVIEWS_DIR = ROOT / ".claude" / "reviews"
+PRINCIPLES = ROOT / "docs" / "learning" / "principles.md"
+
+SEVERITIES = ("must-fix", "should-fix", "nit")
+STATUSES = ("open", "fixed", "withdrawn", "skipped")
+STAGES = ("correctness", "clean-code", "design", "testability")
+FINDINGS_HEADER = "| ID | Severity | Stage | Location | Principle | Why it matters here | Owner | Status |"
+FINDINGS_SEP = "|---|---|---|---|---|---|---|---|"
 
 ID_RE = re.compile(r"(?i)\bE(\d+)-(\d+)([ab]?)\b")
 EXPECTED_STYLE = {"Own": "coach", "Pair": "Learning", "Delegate": "(any; default fine)"}
@@ -409,6 +422,10 @@ updated: {date}
 
 ## Decisions pending (ADR candidates)
 
+## Review findings (verbatim from java-mentor via `ctx.py record-review`; only Status changes)
+| ID | Severity | Stage | Location | Principle | Why it matters here | Owner | Status |
+|---|---|---|---|---|---|---|---|
+
 ## Reviews (/review-mine)
 | Date | Fingerprint | Result |
 |---|---|---|
@@ -438,6 +455,179 @@ def progress_block(heading: str) -> str:
     text = read(PROGRESS)
     m = re.search(rf"^## {re.escape(heading)}.*?$(.*?)(?=^---\s*$|^## |\Z)", text, re.S | re.M)
     return m.group(1).strip() if m else ""
+
+
+# --------------------------------------------------------------------------- code review (java-mentor)
+def _cells(line: str) -> list[str]:
+    return [c.strip() for c in line.strip().strip("|").split("|")]
+
+
+def _section_rows(text: str, heading_prefix: str) -> list[str]:
+    """Table data rows (raw lines) under the first '## <heading_prefix>...' heading."""
+    out, on = [], False
+    for line in text.splitlines():
+        if line.startswith("## "):
+            if on:
+                break
+            on = line[3:].startswith(heading_prefix)
+            continue
+        if on and line.startswith("|"):
+            c = _cells(line)
+            if c and c[0] not in ("ID", "Principle") and not set("".join(c)) <= set("-: "):
+                out.append(line.rstrip())
+    return out
+
+
+def findings(worklog_text: str) -> list[dict]:
+    rows = []
+    for line in _section_rows(worklog_text, "Review findings"):
+        c = _cells(line)
+        if len(c) >= 8:
+            rows.append({"id": c[0], "severity": c[1], "status": c[7], "raw": line})
+    return rows
+
+
+def review_gate(worklog_text: str, fp: str | None = None) -> dict:
+    fs = findings(worklog_text)
+    blocking = [f["id"] for f in fs if f["status"] == "open" and f["severity"] in ("must-fix", "should-fix")]
+    nits = [f["id"] for f in fs if f["status"] == "open" and f["severity"] == "nit"]
+    reviewed = bool(fp and re.search(rf"\|\s*[\d-]+\s*\|\s*{re.escape(fp)}\s*\|", worklog_text))
+    return {"blocking": blocking, "open_nits": nits, "reviewed_at_fp": reviewed, "total": len(fs)}
+
+
+def gate_line(g: dict) -> str:
+    if g["blocking"]:
+        return f"REVIEW GATE: BLOCKED: open must-fix/should-fix: {', '.join(g['blocking'])}"
+    return "REVIEW GATE: clear" + (f" (open nits, your choice: {', '.join(g['open_nits'])})" if g["open_nits"] else "")
+
+
+def parse_review(text: str) -> dict:
+    head = next((l for l in text.splitlines() if l.startswith("# Review")), "")
+    fp = re.search(r"fingerprint\s+(\S+)", head)
+    return {
+        "fingerprint": fp.group(1) if fp else "unknown",
+        "updates": [_cells(l) for l in _section_rows(text, "Status updates")],
+        "new": _section_rows(text, "New findings"),
+        "principles": [_cells(l) for l in _section_rows(text, "Principles cited")],
+    }
+
+
+def _insert_rows(text: str, heading_prefix: str, rows: list[str], header: str, sep: str) -> str:
+    """Append rows at the end of the table under heading; create section (before Reviews) if missing."""
+    lines = text.splitlines()
+    idx = next((i for i, l in enumerate(lines) if l.startswith(f"## {heading_prefix}")), None)
+    if idx is None:
+        anchor = next((i for i, l in enumerate(lines) if l.startswith("## Reviews")), len(lines))
+        block = [f"## {heading_prefix} (verbatim from java-mentor via `ctx.py record-review`; only Status changes)",
+                 header, sep, *rows, ""]
+        return "\n".join(lines[:anchor] + block + lines[anchor:]) + "\n"
+    j = idx + 1
+    while j < len(lines) and not lines[j].startswith("|"):
+        j += 1
+    while j < len(lines) and lines[j].startswith("|"):
+        j += 1
+    return "\n".join(lines[:j] + rows + lines[j:]) + ("\n" if not text.endswith("\n") else "")
+
+
+def record_review(tid: str, review: Path, worklog: Path, principles: Path) -> int:
+    text = read(review)
+    if not text:
+        print(f"ERROR: no review file at {review}")
+        return 1
+    r = parse_review(text)
+    wl = read(worklog) or f"# Worklog — {tid}\n\n## Reviews (/review-mine)\n| Date | Fingerprint | Result |\n|---|---|---|\n"
+    existing = {f["id"]: f for f in findings(wl)}
+    errors = []
+    for line in r["new"]:
+        c = _cells(line)
+        if len(c) != 8:
+            errors.append(f"finding row has {len(c)} cells, expected 8: {line}")
+            continue
+        if not re.fullmatch(r"R\d+", c[0]) or c[0] in existing:
+            errors.append(f"bad or duplicate finding ID '{c[0]}'")
+        if c[1] not in SEVERITIES:
+            errors.append(f"{c[0]}: severity '{c[1]}' not in {SEVERITIES}")
+        if c[2] not in STAGES:
+            errors.append(f"{c[0]}: stage '{c[2]}' not in {STAGES}")
+        if c[7] != "open":
+            errors.append(f"{c[0]}: a new finding must have status 'open'")
+    for c in r["updates"]:
+        if len(c) < 2 or c[0] not in existing:
+            errors.append(f"status update for unknown finding: {c}")
+            continue
+        if c[1] not in STATUSES:
+            errors.append(f"{c[0]}: status '{c[1]}' not in {STATUSES}")
+        if c[1] == "skipped" and existing[c[0]]["severity"] != "nit":
+            errors.append(f"{c[0]}: only nits may be 'skipped' (it is {existing[c[0]]['severity']})")
+    if errors:
+        print("ERROR: review NOT recorded (nothing written):\n- " + "\n- ".join(errors))
+        return 1
+    # 1. status updates: only the Status cell changes, rest of the row stays byte-identical
+    for c in r["updates"]:
+        old = existing[c[0]]["raw"]
+        wl = wl.replace(old, re.sub(r"\|\s*[^|]*\|\s*$", f"| {c[1]} |", old), 1)
+    # 2. new findings: appended verbatim
+    if r["new"]:
+        wl = _insert_rows(wl, "Review findings", r["new"], FINDINGS_HEADER, FINDINGS_SEP)
+    g = review_gate(wl)
+    result = (f"{len(r['new'])} new, {len(r['updates'])} updated · open must-fix/should-fix: "
+              f"{len(g['blocking'])} · open nits: {len(g['open_nits'])}")
+    wl = _insert_rows(wl, "Reviews", [f"| {_dt.date.today().isoformat()} | {r['fingerprint']} | {result} |"],
+                      "| Date | Fingerprint | Result |", "|---|---|---|")
+    worklog.parent.mkdir(parents=True, exist_ok=True)
+    worklog.write_text(wl, encoding="utf-8")
+    cand = update_principles(tid, r["principles"], principles)
+    print(f"Recorded review of {tid} into {worklog}: {result}")
+    print(gate_line(review_gate(wl)))
+    if cand:
+        print("Concept-note candidates (cited in ≥ 2 tickets): " + "; ".join(cand))
+    return 0
+
+
+PRINCIPLES_HEADER = "| Principle | Registry slug | Tickets | Count | Concept-note candidate |"
+
+
+def update_principles(tid: str, cited: list[list[str]], path: Path) -> list[str]:
+    """Tally of principles cited in reviews; ≥ 2 distinct tickets ⇒ concept-note candidate."""
+    concepts = notes_mapping()[0]
+    text = read(path)
+    rows = {}
+    order = []
+    for line in _section_rows(text, "Tally"):
+        c = _cells(line)
+        if len(c) >= 5:
+            rows[c[0].casefold()] = c
+            order.append(c[0].casefold())
+    for c in cited:
+        if not c or not c[0]:
+            continue
+        name, slug = c[0], (c[1] if len(c) > 1 else "—")
+        key = name.casefold()
+        row = rows.get(key) or [name, slug, "", "0", "—"]
+        if key not in rows:
+            order.append(key)
+        tickets_ = [t.strip() for t in row[2].split(",") if t.strip()]
+        if tid not in tickets_:
+            tickets_.append(tid)
+        if row[1] in ("", "—") and slug not in ("", "—"):
+            row[1] = slug
+        row[2], row[3] = ", ".join(tickets_), str(len(tickets_))
+        if len(tickets_) >= 2:
+            s = row[1].strip("`")
+            row[4] = f"yes: append to `{s}`" if s in concepts else "yes: propose a registry entry"
+        rows[key] = row
+    table = [PRINCIPLES_HEADER, "|---|---|---|---|---|"] + ["| " + " | ".join(rows[k]) + " |" for k in order]
+    pre = text.split("## Tally", 1)[0] if "## Tally" in text else PRINCIPLES_PREAMBLE
+    path.write_text(pre.rstrip() + "\n\n## Tally\n\n" + "\n".join(table) + "\n", encoding="utf-8")
+    return [f"{rows[k][0]} → {rows[k][4]}" for k in order if rows[k][4].startswith("yes") and tid in rows[k][2]]
+
+
+PRINCIPLES_PREAMBLE = """# Principles tally (from /review-mine)
+
+Written by `python scripts/claude/ctx.py record-review` from each java-mentor report; read by the mentor
+before every review. A principle cited in reviews of **≥ 2 different tickets** becomes a concept-note
+candidate: append a "Where it shows up" line to its concept note (registry slug), or propose a new registry
+entry in `docs/learning/ticket-notes.md`."""
 
 
 # --------------------------------------------------------------------------- commands
@@ -624,6 +814,8 @@ def cmd_close_check(tid):
     print(f"- Estimate: {row.get('Est h', '?')} h · hours logged in worklog sessions: {session_hours(tid):g} h")
     print(f"- Fingerprint now: {fp} · /review-mine recorded at this fingerprint: "
           f"{'yes' if reviewed else 'NO'}" + ("" if mode != "Delegate" else " (not required for Delegate)"))
+    if mode != "Delegate":
+        print(f"- {gate_line(review_gate(wl, fp))}")
     print(f"- Invariants: {t.get('invariants', '?')}")
     print(f"- Known traps: {t.get('traps', '?')}")
     print("\n## Acceptance criteria (verify each with evidence)")
@@ -651,6 +843,7 @@ def main(argv):
         return 0
     cmd, args = argv[0], argv[1:]
     flags = {a for a in args if a.startswith("--")}
+    opts = dict(a[2:].split("=", 1) for a in flags if "=" in a)  # --worklog=PATH etc.
     args = [a for a in args if not a.startswith("--")]
     tid = norm_id(args[0]) if args else None
     if cmd == "ticket" and tid:
@@ -684,6 +877,31 @@ def main(argv):
         cmd_close_check(tid)
     elif cmd == "check-all":
         cmd_check_all()
+    elif cmd in ("record-review", "review-gate", "findings", "skip-nit"):
+        t = tid or current()
+        if not t:
+            print("No current ticket and no ID given.")
+            return 0
+        wl = Path(opts.get("worklog", worklog_path(t)))
+        if cmd == "skip-nit":
+            fid = next((a for a in args if re.fullmatch(r"R\d+", a)), None)
+            f = next((x for x in findings(read(wl)) if x["id"] == fid), None)
+            if not f or f["severity"] != "nit" or f["status"] != "open":
+                print(f"ERROR: {fid} is not an open nit; only open nits can be skipped.")
+                return 1
+            text = read(wl).replace(f["raw"], re.sub(r"\|\s*[^|]*\|\s*$", "| skipped |", f["raw"]), 1)
+            wl.write_text(text, encoding="utf-8")
+            print(f"{fid} marked skipped (the human's choice). " + gate_line(review_gate(text)))
+            return 0
+        if cmd == "record-review":
+            return record_review(t, Path(opts.get("review", REVIEWS_DIR / f"{t}.md")), wl,
+                                 Path(opts.get("principles", PRINCIPLES)))
+        if cmd == "review-gate":
+            g = review_gate(read(wl), fingerprint())
+            print(gate_line(g) + f" · review recorded at current fingerprint: {'yes' if g['reviewed_at_fp'] else 'no'}")
+            return 1 if g["blocking"] else 0
+        rows = findings(read(wl))
+        print("\n".join([FINDINGS_HEADER, FINDINGS_SEP] + [f["raw"] for f in rows]) if rows else "(no findings yet)")
     else:
         print(__doc__)
     return 0

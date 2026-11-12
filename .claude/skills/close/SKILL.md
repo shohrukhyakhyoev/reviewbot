@@ -15,8 +15,10 @@ Run the gates **in order. Stop at the first failure**, say exactly what is missi
 1. **Build:** `python scripts/claude/verify.py` must end in BUILD SUCCESS with the coverage gate passing.
 2. **Acceptance criteria:** for each criterion above, cite the evidence (test class#method, or a recorded
    manual check). If any criterion has no evidence, stop.
-3. **Review (Pair/Own):** the check above must say a `/review-mine` was recorded at the current
-   fingerprint. Ask the human whether every BLOCKER/MAJOR from that review is resolved. If not, stop.
+3. **Review (Pair/Own):** the check above must say a `/review-mine` was recorded at the current fingerprint,
+   **and** `REVIEW GATE: clear`. Any open must-fix or should-fix means stop: list them, the human fixes them, then
+   `/review-mine` re-reviews. Open nits don't block (the human may `skip-nit` them). Never change a finding's
+   status yourself; only `ctx.py record-review` (from the mentor) or `ctx.py skip-nit` (the human's nit choice) do.
 4. **Notes:** do what `/notes status` does for the required notes (Notion first, inbox fallback). Each one
    needs status `lite` or `understood` **and** must mention this ticket ID. Missing → list them and stop.
 5. **ADR:** `required` → a `docs/adr/NNNN-*.md` naming this ticket must exist. `if: …` → ask whether that

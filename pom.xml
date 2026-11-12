@@ -50,6 +50,9 @@
     <maven-failsafe-plugin.version>3.5.2</maven-failsafe-plugin.version>
     <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
     <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
+    <!-- Error Prone (compile-time bug patterns). 2.51.0 rather than the newest 2.52.0 (10 days old
+         at adoption, 2026-11-12). Needs JDK 21+ and the javac exports in .mvn/jvm.config. -->
+    <error-prone.version>2.51.0</error-prone.version>
   </properties>
 
   <dependencyManagement>
@@ -111,7 +114,24 @@
             <release>${maven.compiler.release}</release>
             <compilerArgs>
               <arg>-parameters</arg>
+              <!-- Error Prone: ERROR-level bug patterns fail the build, WARNING-level ones are printed.
+                   https://errorprone.info/docs/installation -->
+              <arg>-XDcompilePolicy=simple</arg>
+              <arg>--should-stop=ifError=FLOW</arg>
+              <arg>-Xplugin:ErrorProne</arg>
+              <!-- required when building with JDK 21 (google/error-prone#5426) -->
+              <arg>-XDaddTypeAnnotationsToSymbol=true</arg>
             </compilerArgs>
+            <!-- Setting annotationProcessorPaths switches off classpath discovery of annotation
+                 processors: any processor a module needs later (e.g. spring-boot-configuration-processor
+                 for E1-5's @ConfigurationProperties) must be listed here as well. -->
+            <annotationProcessorPaths>
+              <path>
+                <groupId>com.google.errorprone</groupId>
+                <artifactId>error_prone_core</artifactId>
+                <version>${error-prone.version}</version>
+              </path>
+            </annotationProcessorPaths>
           </configuration>
         </plugin>
         <plugin>

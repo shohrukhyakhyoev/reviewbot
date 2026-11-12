@@ -20,6 +20,9 @@ disable-model-invocation: true
 
 ## Procedure
 1. Identify the sub-problem: use the argument, or infer it from the last exchange and confirm in one line.
+   **A review finding ID (`R2`)** is a sub-problem too. Look it up with `python scripts/claude/ctx.py findings`,
+   use the finding's location, principle and "why" as the problem statement, and keep its ladder row keyed `R2`.
+   L4 for a finding = name the exact line and the bug class again, never the fix.
 2. Find its row in the hint table above. No row means level L0.
 3. **Attempt check:** compare "Fingerprint now" with the row's "Fingerprint at last hint".
    - Same fingerprint, and a row exists: **don't escalate.** Rephrase the current level from a

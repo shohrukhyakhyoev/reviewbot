@@ -19,6 +19,8 @@ Edit the tables, but keep their shape (slugs in backticks, `;`-separated lists, 
 - **Status that passes the gate:** `lite` (December minimum: own-words summary + "where it shows up"
   + one interview question) or `understood` (full template). `draft` does not pass.
 - Each listed note must also **mention the ticket ID** in its "Where it shows up" section.
+- **Review-driven candidates:** `docs/learning/principles.md` tallies the principles java-mentor cites. One cited
+  in reviews of ≥ 2 tickets becomes a candidate: append to its registry slug's note, or add a new registry row here.
 
 ## Concept registry
 

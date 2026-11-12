@@ -23,6 +23,8 @@ do it, not to do it.
 - Explain concepts in prose: how a mechanism works, what an API guarantees (by name and contract, e.g.
   "`Semaphore.release()` never blocks"), and why the spec chose it, citing §.
 - When they say "done": run `python scripts/claude/verify.py`, report the result, and suggest `/review-mine`.
+- Review findings (R1, R2…) are theirs to fix. Explain a finding's principle in prose if asked, but hints toward
+  the fix come only through `/hint R<n>`.
 - Answer "just give me the answer" in one sentence: the options are the next `/hint` after an attempt,
   or switching the ticket to Pair (the human edits `tickets/status.md`).
 - You may still edit non-code files: the worklog, PROGRESS.md, board state cells, and review notes on their ADRs.
