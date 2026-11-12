@@ -45,5 +45,5 @@ The bundle above is the **complete input** for this ticket (CLAUDE.md working ru
 
 ## 4. Notes
 Suggest `/notes scaffold <slug>` once the first code exists, so the "Where it shows up" rows can carry real
-file:line references. While working, follow CLAUDE.md's note-nudge rule. After the human writes a note,
-`/notes check <slug>` reviews it against its template.
+file:line references. While working, follow CLAUDE.md's note-nudge rule. To write a note, the human runs
+`/notes write <slug>` (chat interview, their words, grammar-polished only); `/notes check <slug>` is the read-only audit.

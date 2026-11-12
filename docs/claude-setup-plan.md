@@ -436,3 +436,18 @@ Approved by the human. Adds to §3 (components) and §4 (close gate).
     code, and replies with questions only
   - close: the existing gate
 - **Enforced:** the guard asks before Claude writes an ADR, an inbox note, or a Notion page (create/update).
+
+## Amendment 4 (2026-11-12): notes are written in chat (`/notes write`)
+
+- **Why:** writing a note meant leaving Claude Code for Notion and coming back. The human wants to answer in the
+  session and have Claude guide and write it up.
+- **Rule change (CLAUDE.md):** the old "Claude never writes a note's content" becomes: Claude interviews, the human
+  answers in their own words, Claude fixes **only grammar, spelling, word choice and structure** and writes the
+  result to the note. Claude adds no ideas (facts, examples, analogies, explanations). Wrong, vague or missing
+  answers get follow-up questions, never a silent fix or a filled-in sentence. Claude decides when the note meets
+  `lite`/`understood` and sets the status. **ADRs stay human-written.**
+- **New mode:** `/notes write <slug>` (see `.claude/skills/notes/SKILL.md`). `scaffold`, `check` (still read-only)
+  and `sync` are unchanged.
+- **Guard (`pretool_guard.py` rule 7):** still asks before every Notion/inbox/ADR write. Only the message changed:
+  approve a note write only when the text is the human's own words from the chat. Pick "always allow" in the
+  permission prompt for the Notion tools to stop the prompts, if wanted.

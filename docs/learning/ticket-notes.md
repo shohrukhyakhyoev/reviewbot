@@ -19,6 +19,9 @@ Edit the tables, but keep their shape (slugs in backticks, `;`-separated lists, 
 - **Status that passes the gate:** `lite` (December minimum: own-words summary + "where it shows up"
   + one interview question) or `understood` (full template). `draft` does not pass.
 - Each listed note must also **mention the ticket ID** in its "Where it shows up" section.
+- **Who writes:** notes are written through `/notes write <slug>`: the human answers in chat in their own words and
+  Claude only fixes grammar, spelling, word choice and structure (no added ideas); Claude sets the status when the
+  bar is met. ADRs stay human-written (`/notes check` reviews them with questions only).
 - **Review-driven candidates:** `docs/learning/principles.md` tallies the principles java-mentor cites. One cited
   in reviews of ≥ 2 tickets becomes a candidate: append to its registry slug's note, or add a new registry row here.
 

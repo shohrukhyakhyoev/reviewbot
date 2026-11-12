@@ -11,6 +11,7 @@ Turns written rules into checks. deny beats ask; silence means the normal permis
   6. Test-weakening tripwire: @Disabled/assumptions added, @Test removed, fewer assertions,
      CI/coverage gate edits, skip flags, deleting test files                                ask
   7. Claude writing a note or ADR (docs/adr/NNNN-*, docs/learning/inbox/*, Notion page create/update) ask
+     (notes: only the /notes write|scaffold|sync flow, human's own words; ADRs: never Claude's text)
 Fails open with a stderr notice (exit 1 = non-blocking) if the guard itself crashes.
 """
 from __future__ import annotations
@@ -220,13 +221,18 @@ def check(data: dict) -> list[tuple[str, str]]:
             found.append(("ask", f"This edit changes a ticket's Mode or Own scope in tickets/status.md "
                                  f"({', '.join(changed)}). Those are the human's decision."))
 
-    # 7. notes and ADRs are the human's: Claude writing one needs the human's approval (scaffold/sync only)
-    if tool in FILE_TOOLS and (re.fullmatch(r"docs/adr/\d{4}-[^/]+\.md", path) or path.startswith("docs/learning/inbox/")):
-        found.append(("ask", f"{path} is a human-written note/ADR. Approve only a scaffold or sync you asked for, "
-                             "never note content written by Claude."))
+    # 7. ADRs are the human's. Notes are written by /notes write from the human's own chat answers (Claude may
+    #    only fix grammar/wording); the human approves each write.
+    if tool in FILE_TOOLS and re.fullmatch(r"docs/adr/\d{4}-[^/]+\.md", path):
+        found.append(("ask", f"{path} is a human-written ADR. Approve only a scaffold you asked for, "
+                             "never ADR content written by Claude."))
+    if tool in FILE_TOOLS and path.startswith("docs/learning/inbox/"):
+        found.append(("ask", f"{path} is a note. Approve only a /notes write|scaffold|sync you asked for, with text "
+                             "that is your own words from the chat (Claude may only fix grammar/wording)."))
     if tool.startswith("mcp__") and "otion" in tool and re.search(r"create-pages|update-page", tool):
-        found.append(("ask", "Claude is about to write to Notion. Approve only a /notes scaffold or sync you asked "
-                             "for, never note content written by Claude."))
+        found.append(("ask", "Claude is about to write to Notion. Approve only a /notes write|scaffold|sync you asked "
+                             "for, with note text that is your own words from the chat (grammar/wording fixes "
+                             "only, no ideas added by Claude)."))
 
     # 6. test-weakening tripwire
     if tool in FILE_TOOLS and path.endswith(".java") and is_test_file(path):

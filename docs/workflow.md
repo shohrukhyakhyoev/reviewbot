@@ -23,8 +23,12 @@ This file is for the human. Claude's rules are in CLAUDE.md, and the reasoning b
 - At start, `/ticket` lists the notes this ticket needs.
 - While you work, Claude adds a one-line `note-worthy: … → concept note <slug>` or `→ ADR candidate` when it
   fits. It's a nudge, not a stop.
-- After you write a note, `/notes check <slug>` reads it (Notion, inbox, or paste it in). It checks it against
-  the template, the spec and your code, and replies with questions only. It never writes the note.
+- To write a note, run `/notes write <slug>`. Claude interviews you one question at a time and you answer in the
+  chat in your own words. It fixes only grammar, spelling, word choice and structure, writes the result to the
+  note (Notion, or the inbox fallback) and never adds ideas of its own. A wrong or vague answer gets a follow-up
+  question, not a correction. Claude decides when the note meets `lite` and sets the status, then says "notes
+  writing done". No trip to Notion needed.
+- `/notes check <slug|ADR file>` is the read-only audit (questions only). ADRs are still written by you.
 - At close, the `/close` gate checks status and the ticket link.
 
 ## During the ticket, by mode
