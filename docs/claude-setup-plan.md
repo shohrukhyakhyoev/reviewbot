@@ -390,3 +390,34 @@ Pre-deploy E6 + E8 ≈ 40 h + ~3 h notes, then the simple deploy (~20 h): ≈ 21
 are exam months (no project time). The human chose to work as fast as possible without a fixed date. Order:
 core → E6 → E8 → simple deploy → E7, E9, E10 → E11. Recalibrate the remaining Own estimates after E4-0, but
 never downgrade an Own ticket to save time.
+
+---
+
+## Amendment 2 (2026-11-12): code review gate + Error Prone
+
+Approved by the human. Adds to §3 (components) and §4 (close gate).
+
+- **Reviewer:** `java-mentor`, a fresh-context subagent (never a fork), for every Own and Pair ticket, before the
+  learning gate. Order: correctness (ticket invariants and acceptance criteria) → clean code (naming, method size,
+  duplication, error handling, Java 21 idioms) → design (SOLID; patterns only where they solve a real problem;
+  over-engineering/YAGNI flagged) → testability. Each finding: ID, must-fix/should-fix/nit, file:line, the
+  principle by name, why it matters here. No hints in findings (`/hint R<n>` on request); never rewritten code.
+- **Recording:** the mentor writes `.review/<ID>.md` (gitignored; outside `.claude/`, which Claude Code
+  write-protects). `ctx.py record-review` validates structure and every row (all or nothing; a malformed report is
+  rejected, never recorded as "0 findings"), appends findings **verbatim** to the worklog, changes only Status
+  cells on re-review, logs the review at the code fingerprint, and updates the tally.
+- **Gate:** `/close` and the commit-msg hook are blocked while any must-fix or should-fix is `open`. Nits are the
+  human's choice (`ctx.py skip-nit`, which refuses non-nits).
+- **Principle tally:** `docs/learning/principles.md` in the repo (readable, portable; the mentor's agent memory was
+  removed). A principle cited in reviews of ≥ 2 tickets becomes a concept-note candidate (registry slug from
+  `docs/learning/ticket-notes.md`, or a proposed new entry).
+- **Error Prone 2.51.0** in the parent POM (+ `.mvn/jvm.config`): compile-time bug patterns (e.g. DeadException,
+  ignored return values, `@GuardedBy` once annotated), so the review doesn't repeat them. PMD rejected (style
+  noise, overlaps the review).
+- **Validated** on a throwaway fake ticket (E99-9) with planted bugs: 17 findings across all four stages; a re-review
+  marked 3 fixed with evidence and added 1 new; the gate stayed blocked; no trace left in the board, tally or worklogs.
+- **Known limit:** a running Claude Code session keeps the agent definitions it loaded at start. After editing
+  `.claude/agents/*`, restart Claude Code.
+- **Pending (human):** allow the mentor's report writes without a prompt by adding `"Edit(.review/**)"` and
+  `"Write(.review/**)"` to `.claude/settings.json` › permissions.allow, or answer "don't ask again" at the first prompt.
+  Claude can't add it (Claude Code blocks Claude from widening its own permissions).

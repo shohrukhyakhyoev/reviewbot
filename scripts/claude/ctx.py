@@ -21,7 +21,7 @@ Subcommands
   close-check [ID]          everything /close needs to gate a ticket
   check-all                 resolve every ticket's references; report sizes + unresolved refs
   findings [ID]             the ticket's review-findings table (what java-mentor re-reviews)
-  record-review [ID]        copy .claude/reviews/ID.md into the worklog VERBATIM + update docs/learning/principles.md
+  record-review [ID]        copy .review/ID.md into the worklog VERBATIM + update docs/learning/principles.md
                             (options --review= --worklog= --principles= override paths; validates first, writes all or nothing)
   review-gate [ID]          exit 1 while any must-fix/should-fix is open
   skip-nit [ID] R<n>        mark an open NIT skipped (the human's choice; refuses anything that is not a nit)
@@ -52,7 +52,7 @@ NOTES = ROOT / "docs" / "learning" / "ticket-notes.md"
 PROGRESS = ROOT / "PROGRESS.md"
 WORKLOG_DIR = ROOT / ".claude" / "worklog"
 STATE = ROOT / ".claude" / "state" / "current"
-REVIEWS_DIR = ROOT / ".claude" / "reviews"
+REVIEWS_DIR = ROOT / ".review"  # outside .claude/: Claude Code prompts for every write into its config dir
 PRINCIPLES = ROOT / "docs" / "learning" / "principles.md"
 
 SEVERITIES = ("must-fix", "should-fix", "nit")
@@ -533,6 +533,20 @@ def record_review(tid: str, review: Path, worklog: Path, principles: Path) -> in
     text = read(review)
     if not text:
         print(f"ERROR: no review file at {review}")
+        return 1
+    # Structure check first: a report the parser can't read must never record as "0 findings, gate clear".
+    lines = text.splitlines()
+    missing = []
+    if not re.search(rf"^# Review {re.escape(tid)} · \S+ · fingerprint \S+ · mode (Own|Pair)\s*$", text, re.M):
+        missing.append(f"first line '# Review {tid} · <date> · fingerprint <fp> · mode <Own|Pair>'")
+    for heading in ("## Verdict", "## Status updates", "## New findings", "## Principles cited"):
+        if heading not in lines:
+            missing.append(f"heading '{heading}'")
+    if FINDINGS_HEADER not in lines:
+        missing.append(f"findings table header '{FINDINGS_HEADER}'")
+    if missing:
+        print("ERROR: review NOT recorded (nothing written): the report doesn't follow the java-mentor output "
+              "contract. Missing:\n- " + "\n- ".join(missing) + "\nAsk the mentor to rewrite the report in the exact format.")
         return 1
     r = parse_review(text)
     wl = read(worklog) or f"# Worklog — {tid}\n\n## Reviews (/review-mine)\n| Date | Fingerprint | Result |\n|---|---|---|\n"

@@ -14,7 +14,7 @@ coaching conversation. Judge the code as it stands.
   3 lines of *their* code to point at a problem.
 - **No hints in findings.** State the problem, the principle and why it matters, and stop. The human asks for
   hints separately (`/hint R2`). Never include a leading question or a "consider using…" in a finding.
-- **Your only writable file is `.claude/reviews/<ID>.md`**, the report. A guard enforces this, and also limits
+- **Your only writable file is `.review/<ID>.md`**, the report. A guard enforces this, and also limits
   your shell to read-only commands (git diff/log/show/status, `scripts/claude/ctx.py`, `scripts/claude/verify.py`, ls/cat/grep).
 - **The spec wins.** Never recommend anything that contradicts `docs/spec.md` v1.2 or CLAUDE.md, even if it's
   common practice. For example: no jitter on backoffs (§12 fixes the schedule), no JPA (explicit SQL by ruling),
@@ -61,7 +61,7 @@ Don't inflate: a nit is a nit.
 change or explanation shows the finding was wrong). Then review the changed code for **new** problems. Continue
 the ID numbering after the highest existing R-number.
 
-## Output: write EXACTLY this structure to `.claude/reviews/<ID>.md`, then return its full text
+## Output: write EXACTLY this structure to `.review/<ID>.md`, then return its full text
 Use no `|` characters inside table cells. Exactly 8 cells per finding row.
 
 ```

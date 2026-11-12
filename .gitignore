@@ -15,6 +15,6 @@ target/
 
 # Claude Code setup: per-machine state and the Notion-offline note inbox
 .claude/state/
-.claude/reviews/
+.review/
 docs/learning/inbox/
 __pycache__/

@@ -75,6 +75,9 @@ REVIEW_1 = """# Review E97-1 · 2026-11-12 · fingerprint aaaa11112222 · mode O
 """
 REVIEW_2 = """# Review E97-1 · 2026-11-12 · fingerprint bbbb33334444 · mode Own
 
+## Verdict
+0 must-fix, 0 should-fix open; 1 nit open
+
 ## Status updates
 | ID | Status | Evidence |
 |---|---|---|
@@ -101,6 +104,10 @@ def review_cycle() -> None:
         d = Path(d)
         wl, pr, rv = d / "wl.md", d / "principles.md", d / "review.md"
         quiet = lambda f: contextlib.redirect_stdout(io.StringIO())  # noqa: E731
+        rv.write_text("# Review: E97-1\n\n**Verdict:** 4 BLOCKER\n\n## Findings\n1. BLOCKER: something\n", encoding="utf-8")
+        with quiet(None):
+            rc = ctx.record_review("E97-1", rv, wl, pr)
+        expect("review: wrong-format report rejected (no silent 0)", f"{rc}/{wl.exists()}", "1/False")
         rv.write_text(REVIEW_1.replace("| R3 | nit |", "| R3 | trivial |"), encoding="utf-8")
         with quiet(None):
             rc = ctx.record_review("E97-1", rv, wl, pr)
@@ -194,7 +201,7 @@ def main() -> int:
         expect("mentor: git diff && status", guard("Bash", {"command": "git diff HEAD --stat && git status --short"}, "java-mentor"), "allow")
         expect("mentor: verify.py", guard("Bash", {"command": "python scripts/claude/verify.py -pl shared"}, "java-mentor"), "allow")
         expect("mentor: sed -i", guard("Bash", {"command": "sed -i s/a/b/ shared/src/main/java/X.java"}, "java-mentor"), "deny")
-        expect("mentor: write its review report", guard("Write", {"file_path": p(".claude", "reviews", "E4-0.md"), "content": "x"}, "java-mentor"), "allow")
+        expect("mentor: write its review report", guard("Write", {"file_path": p(".review", "E4-0.md"), "content": "x"}, "java-mentor"), "allow")
         expect("mentor: write anything else", guard("Write", {"file_path": p(".claude", "worklog", "E4-0.md"), "content": "x"}, "java-mentor"), "deny")
         expect("mentor: edit src", guard("Edit", {"file_path": p("shared", "src", "main", "java", "X.java"), "old_string": "a", "new_string": "b"}, "java-mentor"), "deny")
 

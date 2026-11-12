@@ -21,13 +21,13 @@ git diff HEAD --stat
    > Ticket <ID>, mode <mode>, fingerprint <fp>. Review the human-written changes:
    > <`$ARGUMENTS` if given, else "`git diff HEAD` plus untracked files under src/">.
    > [Pair only] Claude-written scaffolding: <files/regions you scaffolded this ticket>.
-   > Write your report to .claude/reviews/<ID>.md.
+   > Write your report to .review/<ID>.md.
 3. **Record it verbatim:** run `python scripts/claude/ctx.py record-review <ID>`. The script copies every finding
    row byte-for-byte into the worklog, changes only Status cells for re-reviewed findings, logs the review at
    this fingerprint, and updates `docs/learning/principles.md`. You never retype, merge, soften or drop a
    finding. If the script rejects the report (malformed row), send the mentor its error message, ask it to
    rewrite the file, and record again.
-4. **Show the human the report as-is:** print `.claude/reviews/<ID>.md` unchanged. Don't summarize or reword
+4. **Show the human the report as-is:** print `.review/<ID>.md` unchanged. Don't summarize or reword
    findings. Then add the script's gate line and any concept-note candidates.
 5. **What happens next:**
    - Own mode: the human fixes; `/hint R<n>` gives escalating hints for one finding; then `/review-mine` again
