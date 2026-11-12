@@ -24,7 +24,7 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: HOST:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_LOG_DIRS: /var/lib/kafka/data
-      # E2-4's provisioning is the ONLY source of topics.
+      # The kafka-init service (infra/kafka/provision-topics.sh, E2-4) is the ONLY source of topics.
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
       # Single broker: RF=1 / ISR=1 everywhere (intentional divergence from prod).
       KAFKA_DEFAULT_REPLICATION_FACTOR: 1
@@ -41,6 +41,22 @@ services:
       timeout: 10s
       retries: 12
       start_period: 20s
+
+  # Creates the three topics (spec §4.1) after Kafka is healthy, then exits. Idempotent:
+  # create-if-absent, verify-never-alter (infra/kafka/provision-topics.sh). Exits non-zero
+  # if an existing topic drifts from the spec. Local env => RF=1 / min.insync.replicas=1.
+  kafka-init:
+    image: apache/kafka:3.8.1 # same image as the broker: ships kafka-topics.sh
+    entrypoint: ["/bin/bash", "/scripts/provision-topics.sh"]
+    environment:
+      KAFKA_ENV: local
+      BOOTSTRAP_SERVER: kafka:19092
+    volumes:
+      - ./kafka:/scripts:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: "no"
 
   postgres:
     image: postgres:16-alpine
