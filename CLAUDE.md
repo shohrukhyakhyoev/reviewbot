@@ -20,7 +20,8 @@ This file holds only what cannot be inferred from the code or the spec.
    wrong before changing it.
 5. **Close every ticket with `/close`** — it gates on build, acceptance criteria,
    review, notes and teach-back, then updates `PROGRESS.md` (what was built, decisions
-   the next session must respect, anything noticed) and `tickets/status.md`. Sessions
+   the next session must respect, anything noticed) and `tickets/status.md`, then ships it: branch → commit
+   `<ID>: <title>` → push → PR → rebase-merge on green CI → back to `main`. Sessions
    start cold; PROGRESS.md and `.claude/worklog/<ID>.md` are the memory.
 
 ## Ticket modes (Mode column of `tickets/status.md` — the human's decision, never change it)

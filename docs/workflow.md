@@ -61,8 +61,11 @@ without re-reading anything. A `wip(E4-0): …` commit is fine.
    explanations.** December minimum = status `lite`.
 3. `/close`. This is the gate: build → acceptance criteria → review → notes → ADR → teach-back (Own 5 /
    Pair 3 / Delegate 1). A fail keeps the ticket `wip`. A pass writes PROGRESS.md and the board.
-4. Commit `E4-0: <title>`. The commit-msg hook refuses it if the Learning line or the board says otherwise.
-   `--no-verify` exists, and using it is your decision.
+4. Shipping is the last step of `/close` (step 8): feature branch `e4-0-<short-words>` from an up-to-date `main`,
+   commit `E4-0: <title>` (no AI-attribution trailer), push, PR, wait for CI, **rebase-merge only on green**
+   (no merge commit), delete the branch, back to `main`. Red CI stops it with the PR left open. The commit-msg
+   hook refuses the commit if the Learning line or the board says otherwise. `--no-verify` exists, and using
+   it is your decision.
 
 ## Calibrating the plan
 `tickets/status.md` records Est h vs Actual h (summed from `/handoff` session lines). After E4-0: if Own

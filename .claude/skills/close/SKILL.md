@@ -1,6 +1,6 @@
 ---
 name: close
-description: Ticket close gate. Build, acceptance criteria, review, notes, ADR and teach-back; stops at the first gap. Writes PROGRESS.md and the board only when everything passes.
+description: Ticket close gate. Build, acceptance criteria, review, notes, ADR and teach-back; stops at the first gap. When everything passes it writes PROGRESS.md and the board, then ships - feature branch, commit, push, PR, rebase-merge on green CI, back to main.
 argument-hint: "[ticket-id, default: current]"
 disable-model-invocation: true
 ---
@@ -40,5 +40,28 @@ Run the gates **in order. Stop at the first failure**, say exactly what is missi
    - If Completed now has more than 5 entries, move the oldest verbatim to the top of `docs/progress-archive.md`.
    - `tickets/status.md`: State `done`, Actual h. Never touch Mode.
    - Worklog: append `- <date> — 0h — closed`.
-   - Propose the commit subject `<ID>: <ticket title>`. The commit-msg hook re-checks the Learning line and
-     the board. Commit only if the human asks.
+   - The commit-msg hook re-checks the Learning line and the board when step 8 commits.
+8. **Ship (git flow).** Only after step 7 is saved. The human running `/close` is the explicit request to
+   commit, push, open the PR and merge it. Do all of this, in order, without asking again:
+   1. **Start clean.** Must be on `main`. Run `git fetch` and `git pull --ff-only`. Check `git status`: every
+      changed file must belong to this ticket (code, tests, docs, `PROGRESS.md`, `tickets/status.md`, the
+      worklog). Anything unrelated → list it and ask. Stage files by path, never `git add -A` or `git add .`.
+   2. **Branch.** `git switch -c <branch>` from `main`. Name: ticket ID in lowercase, then 2–4 kebab-case words
+      from the title, e.g. `e2-3-flyway-v1`, `e5-0-reviews-claim`. Never a branch that already exists.
+   3. **Commit.** Subject exactly `<ID>: <ticket title>` (e.g. `E2-3: Flyway V1 migration`); body: a few bullets
+      of what changed and why. **No `Co-Authored-By` or any AI-attribution trailer** (the human's saved
+      preference overrides the default). Never `--no-verify`. If the hook refuses, fix the cause and stop if
+      it is a real gate failure; do not work around it.
+   4. **Push** with `git push -u origin <branch>`.
+   5. **PR.** `gh pr create --base main` with title = the commit subject and a short body (Built / Tests from
+      the PROGRESS entry, plus any risk worth watching in CI). No "Generated with Claude Code" footer.
+   6. **CI.** `gh pr checks <n> --watch`. **Red or cancelled → stop**: leave the PR and branch open, report the
+      failing job and step, do not merge. The human decides the next move.
+   7. **Merge only when CI is green:** `gh pr merge <n> --rebase --delete-branch` (rebase-merge: no merge
+      commit, no squash).
+   8. **Return to `main`.** `git switch main`, `git pull --ff-only`, `git fetch --prune`. Confirm the feature
+      branch is gone locally and on the remote.
+   9. **Report** in 3 lines: the PR link, the new `main` commit, and `Next: /ticket <next id>`
+      (`python scripts/claude/ctx.py next`).
+   If any command in 1–8 fails unexpectedly, stop at that point and say exactly where the repo is left
+   (branch, pushed or not, PR open or not).
