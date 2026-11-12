@@ -4,9 +4,10 @@
 Turns written rules into checks. deny beats ask; silence means the normal permission flow.
   1. .claude/state/** is written only by /ticket's render step, never by Claude            deny
   2. java-mentor subagent: read-only (its own memory dir excepted)                         deny
-  3. Own mode: no Claude edits under any src/ (file tools; shell writes best-effort)         deny
+  3. Own mode: no Claude edits under any src/, or only inside the split ticket's Own scope
+     packages (file tools; shell writes best-effort)                                         deny
   4. Full Read of docs/spec.md or tickets/v1-backlog.md (use scripts/claude/ctx.py)         ask
-  5. Changing a Mode cell in tickets/status.md (the human owns modes)                       ask
+  5. Changing a Mode or Own scope cell in tickets/status.md (the human owns them)           ask
   6. Test-weakening tripwire: @Disabled/assumptions added, @Test removed, fewer assertions,
      CI/coverage gate edits, skip flags, deleting test files                                ask
 Fails open with a stderr notice (exit 1 = non-blocking) if the guard itself crashes.
@@ -99,22 +100,50 @@ def edit_texts(tool: str, ti: dict, r: str) -> tuple[str, str]:
     return ti.get("old_string", "") or "", ti.get("new_string", "") or ""
 
 
-def current_mode() -> tuple[str | None, str]:
+def current_mode() -> tuple[str | None, str, list[str]]:
+    """(ticket id, mode, own-scope globs; [] means the whole src/ tree)."""
     try:
         import ctx  # scripts/claude/ctx.py
         tid = ctx.current()
-        return tid, (ctx.mode_of(tid) if tid else "none")
+        if not tid:
+            return None, "none", []
+        row = ctx.board_row(tid) or {}
+        scope = row.get("Own scope", "all")
+        globs = [] if scope in ("", "all", "—") else [g.strip() for g in scope.split(",") if g.strip()]
+        return tid, row.get("Mode", "?"), globs
     except Exception as e:  # never block on our own bug
         print(f"pretool_guard: could not read mode: {e}", file=sys.stderr)
-        return None, "unknown"
+        return None, "unknown", []
 
 
-def status_modes(text: str) -> dict[str, str]:
-    out = {}
+def glob_re(glob: str) -> re.Pattern:
+    """'**/finalize/**' -> regex over a repo-relative posix path."""
+    out, i = "", 0
+    while i < len(glob):
+        if glob.startswith("**/", i):
+            out, i = out + "(?:.*/)?", i + 3
+        elif glob.startswith("**", i):
+            out, i = out + ".*", i + 2
+        elif glob[i] == "*":
+            out, i = out + "[^/]*", i + 1
+        else:
+            out, i = out + re.escape(glob[i]), i + 1
+    return re.compile(out + r"\Z")
+
+
+def status_cells(text: str) -> dict[str, tuple[str, str]]:
+    """ID -> (Mode, Own scope), located by header names."""
+    out, header = {}, None
     for line in text.splitlines():
+        if not line.startswith("|"):
+            continue
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) >= 4 and re.fullmatch(r"E\d+-\d+[ab]?", cells[0]):
-            out[cells[0]] = cells[3]
+        if header is None and "Mode" in cells:
+            header = cells
+            continue
+        if header and cells and re.fullmatch(r"E\d+-\d+[ab]?", cells[0]):
+            row = dict(zip(header, cells))
+            out[cells[0]] = (row.get("Mode", ""), row.get("Own scope", ""))
     return out
 
 
@@ -146,9 +175,9 @@ def check(data: dict) -> list[tuple[str, str]]:
                 found.append(("deny", "java-mentor may run only read-only commands (git diff/log/show/status, ctx.py, "
                                       "verify.py/mvnw, ls/cat/grep)."))
 
-    # 3. Own mode: Claude never writes code
-    tid, mode = current_mode()
-    if mode == "Own":
+    # 3. Own mode: Claude never writes the human's code (whole src/, or the split ticket's own scope)
+    tid, mode, globs = current_mode()
+    if mode == "Own" and not globs:
         msg = (f"Own mode ({tid}): the human writes all code and tests. Don't edit under src/; give a hint at the "
                "current /hint level or point to file:line. Only the human can change the mode (tickets/status.md "
                "+ /ticket).")
@@ -156,6 +185,15 @@ def check(data: dict) -> list[tuple[str, str]]:
             found.append(("deny", msg))
         if tool in SHELL_TOOLS and writes and re.search(r"(^|[\s\"'=/\\])src[/\\]", cmd):
             found.append(("deny", msg + " (shell write into src/ detected)"))
+    elif mode == "Own":
+        msg = (f"Split Own ticket ({tid}): {', '.join(globs)} belong to the human (code and tests). Claude may "
+               "write only the wiring outside them. Give a hint or point to file:line instead.")
+        if tool in FILE_TOOLS and any(glob_re(g).match(path) for g in globs):
+            found.append(("deny", msg))
+        frags = [g.replace("**/", "").replace("/**", "").strip("/") for g in globs]
+        norm = cmd.replace("\\", "/")
+        if tool in SHELL_TOOLS and writes and any(f and f"/{f}/" in norm for f in frags):
+            found.append(("deny", msg + " (shell write into an own-scope package detected)"))
 
     # 4. big-doc full reads
     if tool == "Read" and path in BIG_DOCS and not ti.get("limit"):
@@ -167,18 +205,18 @@ def check(data: dict) -> list[tuple[str, str]]:
             and not re.search(r"\b(head|tail|sed\s+-n|Select-Object|-TotalCount|-Tail|grep)\b", cmd):
         found.append(("ask", "Shell read of a whole big doc. Use scripts/claude/ctx.py instead."))
 
-    # 5. Mode cells in the board
+    # 5. Mode / Own scope cells in the board (the human's decision)
     if tool in FILE_TOOLS and path == "tickets/status.md":
         old, new = edit_texts(tool, ti, path)
         if tool == "Write":
-            before, after = status_modes(old), status_modes(new)
+            before, after = status_cells(old), status_cells(new)
             changed = sorted(k for k in before if k in after and before[k] != after[k])
         else:
-            pat = r"\|\s*(Delegate|Pair|Own|TBD)\s*\|"
+            pat = r"\|\s*(Delegate|Pair|Own|TBD)\s*\|\s*([^|]*?)\s*\|"
             changed = ["?"] if re.findall(pat, old) != re.findall(pat, new) else []
         if changed:
-            found.append(("ask", f"This edit changes a ticket Mode in tickets/status.md ({', '.join(changed)}). "
-                                 "Modes are the human's decision."))
+            found.append(("ask", f"This edit changes a ticket's Mode or Own scope in tickets/status.md "
+                                 f"({', '.join(changed)}). Those are the human's decision."))
 
     # 6. test-weakening tripwire
     if tool in FILE_TOOLS and path.endswith(".java") and is_test_file(path):

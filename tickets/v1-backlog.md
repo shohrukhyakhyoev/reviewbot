@@ -880,7 +880,7 @@ Execution order: E2-0 → E2-1 → E2-2 → E2-3 → E2-4 → E1-0…E1-5 → E3
 
 **Epic:** E5 · **Depends on:** E5-6 · **Size:** M
 
-**Spec sections to read first:** §7.1 (steps 12a, 12c — *not* 12b), §13.1 (marker row), decision log \#11, ruling 6 (S-3 defang)
+**Spec sections to read first:** §7.1 (steps 12a, 12c — *not* 12b), §13.1 (marker row), decision log \#11, §7.1 step 12c
 
 **Context:** The load-bearing side effect. v1 posts blind on the happy path — dedup and the lock established sole ownership; zero happy-path GitHub reads (log \#12). The marker makes the post recognizable and unforgeable: invisible HTML comment with an HMAC over `(inst,repo,pr,sha,round)` under the app secret (S-2).
 

@@ -21,7 +21,8 @@ This file is for the human. Claude's rules are in CLAUDE.md, and the reasoning b
 |---|---|---|
 | Delegate | approve the plan, read the whole diff, run `/code-review` (and `/security-review` on E3-0, E5-1, E5-3, E9-*) | implements, runs `verify.py` |
 | Pair | write every `TODO(human)`, ask "why" freely | scaffolds in small steps, then stops at each `TODO(human)` |
-| Own | write all production code and tests, tests first | asks questions; `/hint [sub-problem]` raises one level per new attempt (L0 → L4, never the answer) |
+| Own | write all production code and tests, tests first | asks questions, may list test cases (never test code); `/hint [sub-problem]` raises one level per new attempt (L0 → L4, never the answer) |
+| Own, split (E5-7, E5-9a) | write the packages in the board's Own scope column, plus their tests | does the wiring outside them first (`/output-style Learning`); then you switch to `/output-style coach` for the core |
 
 - **Hint ladder:** L0 asks what you tried, L1 points to § and notes, L2 names the API/technique, L3 gives the
   shape in prose or a counterexample, L4 gives file:line + the bug class. No escalation without a new attempt.
@@ -48,8 +49,9 @@ without re-reading anything. A `wip(E4-0): …` commit is fine.
    `--no-verify` exists, and using it is your decision.
 
 ## Calibrating the plan
-`tickets/status.md` records Est h vs Actual h (summed from `/handoff` session lines). After E4-0: if
-Actual/Est > 1.3, move E5-9b to Pair or move the December date (plan option E).
+`tickets/status.md` records Est h vs Actual h (summed from `/handoff` session lines). After E4-0: if Own
+tickets run more than 1.3× over, re-estimate the remaining Own tickets. Planning only: no fixed date, and Own
+tickets are never downgraded to save time.
 
 ## When things break
 - **Notion unavailable:** notes go to `docs/learning/inbox/<slug>.md` with `notion: pending`. Run

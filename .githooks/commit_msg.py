@@ -56,10 +56,16 @@ def main(msg_file: str) -> int:
         return fail(f"the [{tid}] Learning line still has unchecked items: {line.strip()}")
     if not re.search(r"teach-back:\s*pass", line, re.I):
         return fail(f"the [{tid}] Learning line does not record 'teach-back: pass'.")
-    row = next((l for l in staged("tickets/status.md").splitlines() if re.match(rf"^\|\s*{re.escape(tid)}\s*\|", l)), "")
-    cells = [c.strip() for c in row.strip().strip("|").split("|")]
-    if len(cells) < 5 or cells[4] != "done":
-        return fail(f"tickets/status.md (staged) does not mark {tid} as done.")
+    header, state = None, None
+    for l in staged("tickets/status.md").splitlines():
+        cells = [c.strip() for c in l.strip().strip("|").split("|")]
+        if header is None and "State" in cells:
+            header = cells
+        elif header and cells and cells[0] == tid:
+            state = dict(zip(header, cells)).get("State")
+            break
+    if state != "done":
+        return fail(f"tickets/status.md (staged) does not mark {tid} as done (State={state}).")
     return 0
 
 

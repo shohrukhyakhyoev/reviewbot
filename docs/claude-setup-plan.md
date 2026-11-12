@@ -357,3 +357,36 @@ The repo (now `affaan-m/ECC`, ~301k stars, release 2.2.3 dated 2026-10-01) curre
 - commit-msg: an `E2-3: x` commit without a Learning line fails, and a `wip(E2-3):` commit passes.
 - CLAUDE.md: I1–I10, traps and DoD diff-identical to the current text, except for the `infra` fix.
 - `./mvnw clean verify` still green (no Java touched).
+
+---
+
+## Amendment 1 (2026-11-12): the human owns the hard parts
+
+Approved by the human; supersedes the option-C mode split in §4. Learning depth matters more than any date.
+
+**Own rule:** a ticket is Own if its core logic *is* an invariant or a load-bearing ordering (I1–I10, C-1, I8,
+I9), not just listing I5, or it is a concurrency/idempotency core an interviewer would drill into.
+Boilerplate, config, clients and test harnesses stay Pair or Delegate.
+
+**Own set (16):**
+- Core phase (13): E3-3 (C-1) · E4-0 (I3/I4) · E4-1 (supersede ≠ reviewed, P1-1) · E4-2 (I2/I4/I10) · E4-3 (I1/I6) ·
+  E4-4 (I7) · E5-0 (class-aware claim, P1-2) · **E5-2** (distributed lock, I2 cross-instance) · E5-5 (lock + claim) ·
+  **E5-7, split** (post_attempted_at-before-POST + HMAC marker) · E5-8 (§13.2 guard) · **E5-9a, split** (I8) · E5-9b (I9, C-2, C-3)
+- Later (3): E6-0 (I1/I6) · E6-1 (I9 with commitSync) · E8-1 (I6 dependency-pause half)
+- Kept Pair: E1-2 (I5 vocabulary only) · E4-5, E5-10 (harnesses; the human writes the invariant assertions as
+  `TODO(human)`) · E3-0, E5-3, E9-0 (security, not ordering/concurrency) · E3-2, E5-4 (cost orderings) ·
+  E7-0/E7-1 (repeat of the I9 pattern) · E8-2 (feeds I6, isn't I6).
+
+**Split tickets (hook-enforced by package):** `tickets/status.md` › Own scope lists the human's packages, which
+cover their tests too. E5-9a: `**/finalize/**` (Claude does the producer config and wiring). E5-7: `**/marker/**`,
+`**/post/**` (Claude does body rendering and defang in `**/render/**`). Claude does the wiring first in `Learning`
+style, then the human writes the core in `coach` style. E3-3 stays whole-Own (its config is about 20 lines).
+
+**Tests in Own tickets:** the human writes all of them, fixtures included. Claude may list test cases (names +
+what each asserts), never test code. Enforced by the same guard.
+
+**Math (hours only, no deadline):** core phase 137.5 h (Own 91 · Pair 40.5 · Delegate 6) + ~12 h lite notes.
+Pre-deploy E6 + E8 ≈ 40 h + ~3 h notes, then the simple deploy (~20 h): ≈ 213 h to the first deploy. Jan–Feb
+are exam months (no project time). The human chose to work as fast as possible without a fixed date. Order:
+core → E6 → E8 → simple deploy → E7, E9, E10 → E11. Recalibrate the remaining Own estimates after E4-0, but
+never downgrade an Own ticket to save time.

@@ -29,7 +29,8 @@ This file holds only what cannot be inferred from the code or the spec.
 |---|---|---|---|
 | Delegate | Claude | default | short plan → human's go → implement → `scripts/claude/verify.py`; human reviews + `/code-review` |
 | Pair | Claude scaffolds; the human writes every `TODO(human)` | `Learning` | small steps; stop at each decision-bearing point (orderings, validation, compares, transitions) |
-| Own | the human — production code AND tests | `coach` | questions, `/hint` ladder (L0–L4, never the answer), `/review-mine`; **no code** — a hook blocks edits under `src/` |
+| Own | the human — production code AND tests | `coach` | questions, `/hint` ladder (L0–L4, never the answer), `/review-mine`; test cases as a list only; **no code** — a hook blocks edits under `src/` |
+| Own, split (Own scope = package list, e.g. E5-9a `**/finalize/**`) | the human writes those packages + their tests; Claude the wiring outside | `Learning` → `coach` | wiring first, then coach; the hook blocks edits inside the listed packages |
 
 Session loop: SessionStart injects the current ticket, mode and worklog → work →
 `/handoff` before ending a session → `/review-mine` (Pair/Own) → `/notes` → `/close`.

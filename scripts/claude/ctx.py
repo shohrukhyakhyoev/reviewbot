@@ -54,8 +54,9 @@ TEACH_BACK = {"Own": 5, "Pair": 3, "Delegate": 1}
 MODE_RULES = {
     "Own": (
         "Human writes ALL production code and tests. Claude coaches only: no code in chat or files "
-        "(the PreToolUse guard denies Claude's edits under src/). Escalate help only via /hint "
-        "(one level per new attempt, never the answer). /review-mine after green. Teach-back: 5 questions."
+        "(the PreToolUse guard denies Claude's edits under src/). Claude may list test cases (names + what "
+        "they assert), never test code. Escalate help only via /hint (one level per new attempt, never the "
+        "answer). /review-mine after green. Teach-back: 5 questions."
     ),
     "Pair": (
         "Output style Learning. Claude writes wiring/config/test scaffolding in small steps and leaves "
@@ -67,6 +68,13 @@ MODE_RULES = {
         "scripts/claude/verify.py. Human reviews the diff and runs /code-review. Teach-back: 1 question."
     ),
 }
+SPLIT_STYLE = "Learning while Claude does the wiring, then coach while the human writes the own-scope core"
+SPLIT_RULES = (
+    "Split Own ticket. The packages {scope} (code AND tests) are the human's: Claude never writes there, and the "
+    "guard denies it. Claude writes only the wiring/config outside them, first, in small steps. Then the human "
+    "writes the core with /hint help only. Claude may list test cases (names + what they assert), never test "
+    "code. /review-mine after green. Teach-back: 5 questions."
+)
 
 
 # --------------------------------------------------------------------------- helpers
@@ -494,11 +502,14 @@ def cmd_bundle(tid, set_cur):
     out.append(f"# Ticket bundle: {tid} — {t['title']}")
     out.append("")
     out.append("## Status (tickets/status.md)")
-    out.append(f"- Mode: **{mode}** · Size: {row.get('Size', t.get('size'))} · State: {row.get('State', '?')} · "
-               f"Cut: {row.get('Cut', '?')} · Est: {row.get('Est h', '?')} h")
+    scope = row.get("Own scope", "all")
+    split = mode == "Own" and scope not in ("", "all", "—")
+    out.append(f"- Mode: **{mode}**" + (f" (split; human-owned scope: `{scope}`)" if split else "") +
+               f" · Size: {row.get('Size', t.get('size'))} · State: {row.get('State', '?')} · "
+               f"Phase: {row.get('Phase', '?')} · Est: {row.get('Est h', '?')} h")
     out.append(f"- Depends on: {deps}" + ("" if deps_ok else "  ⚠ NOT ALL DONE: stop and tell the human."))
-    out.append(f"- Expected output style: {EXPECTED_STYLE.get(mode, '?')}")
-    out.append(f"- Mode rules: {MODE_RULES.get(mode, 'unknown mode: ask the human')}")
+    out.append(f"- Expected output style: {SPLIT_STYLE if split else EXPECTED_STYLE.get(mode, '?')}")
+    out.append(f"- Mode rules: {SPLIT_RULES.format(scope=scope) if split else MODE_RULES.get(mode, 'unknown mode: ask the human')}")
     if set_cur:
         out.append(f"- Current ticket set to {tid}" + (f"; worklog created at .claude/worklog/{tid}.md" if created else ""))
     out.append("")

@@ -65,6 +65,16 @@ def main() -> int:
         expect("Own: mvnw test 2>&1 | tail", guard("Bash", {"command": "./mvnw -pl review-worker test 2>&1 | tail -40"}), "allow")
         expect("Own: git diff src", guard("Bash", {"command": "git diff HEAD -- review-worker/src"}), "allow")
 
+        ctx.set_current("E5-5")  # newly Own (amendment 1), scope all
+        expect("E5-5 Own: Edit src/main", guard("Edit", {"file_path": p("shared", "src", "main", "java", "dev", "reviewbot", "shared", "ClaimStep.java"), "old_string": "a", "new_string": "b"}), "deny")
+
+        ctx.set_current("E5-9a")  # split Own: **/finalize/** is the human's
+        fin = ("shared", "src", "main", "java", "dev", "reviewbot", "shared", "finalize")
+        expect("E5-9a split: Edit finalize core", guard("Edit", {"file_path": p(*fin, "Finalizer.java"), "old_string": "a", "new_string": "b"}), "deny")
+        expect("E5-9a split: Write finalize test", guard("Write", {"file_path": p("shared", "src", "test", "java", "dev", "reviewbot", "shared", "finalize", "FinalizerTest.java"), "content": "x"}), "deny")
+        expect("E5-9a split: Edit wiring outside", guard("Edit", {"file_path": p("review-worker", "src", "main", "java", "dev", "reviewbot", "worker", "WorkerWiring.java"), "old_string": "a", "new_string": "b"}), "allow")
+        expect("E5-9a split: shell write into finalize", guard("Bash", {"command": "echo x > shared/src/main/java/dev/reviewbot/shared/finalize/F.java"}), "deny")
+
         ctx.set_current("E1-0")  # Pair
         expect("Pair: Edit src/main", guard("Edit", {"file_path": p("shared", "src", "main", "java", "X.java"), "old_string": "a", "new_string": "b"}), "allow")
         expect("Write .claude/state", guard("Write", {"file_path": p(".claude", "state", "current"), "content": "{}"}), "deny")
@@ -87,8 +97,9 @@ def main() -> int:
         expect("git commit --no-verify", guard("Bash", {"command": "git commit --no-verify -m x"}), "ask")
         expect("rm a test file", guard("Bash", {"command": "rm shared/src/test/java/ATest.java"}), "ask")
         s = p("tickets", "status.md")
-        expect("status.md: change Mode", guard("Edit", {"file_path": s, "old_string": "| E4-0 | OffsetTracker | M | Own | todo |", "new_string": "| E4-0 | OffsetTracker | M | Pair | todo |"}), "ask")
-        expect("status.md: change State", guard("Edit", {"file_path": s, "old_string": "| E4-0 | OffsetTracker | M | Own | todo |", "new_string": "| E4-0 | OffsetTracker | M | Own | wip |"}), "allow")
+        expect("status.md: change Mode", guard("Edit", {"file_path": s, "old_string": "| E4-0 | OffsetTracker | M | Own | all | todo |", "new_string": "| E4-0 | OffsetTracker | M | Pair | all | todo |"}), "ask")
+        expect("status.md: change Own scope", guard("Edit", {"file_path": s, "old_string": "| E5-9a | Finalize | M | Own | **/finalize/** | todo |", "new_string": "| E5-9a | Finalize | M | Own | **/none/** | todo |"}), "ask")
+        expect("status.md: change State", guard("Edit", {"file_path": s, "old_string": "| E4-0 | OffsetTracker | M | Own | all | todo |", "new_string": "| E4-0 | OffsetTracker | M | Own | all | wip |"}), "allow")
         expect("mentor: git diff && status", guard("Bash", {"command": "git diff HEAD --stat && git status --short"}, "java-mentor"), "allow")
         expect("mentor: verify.py", guard("Bash", {"command": "python scripts/claude/verify.py -pl shared"}, "java-mentor"), "allow")
         expect("mentor: sed -i", guard("Bash", {"command": "sed -i s/a/b/ shared/src/main/java/X.java"}, "java-mentor"), "deny")
@@ -102,9 +113,9 @@ def main() -> int:
         add = out.get("hookSpecificOutput", {}).get("additionalContext", "")
         expect("SessionStart injects current ticket", "ok" if "E1-0" in add and "Pair" in add else "missing", "ok")
 
-        # ctx.py: every ticket resolves (the one known non-§ reference is E5-7's 'ruling 6')
+        # ctx.py: every ticket's spec references resolve
         unresolved = [tid for tid, t in ctx.tickets().items() if ctx.resolve_refs(t.get("spec_line", ""))[1]]
-        expect("ctx: unresolved refs only E5-7", ",".join(unresolved) or "none", "E5-7")
+        expect("ctx: no unresolved spec refs", ",".join(unresolved) or "none", "none")
         expect("ctx: 54 tickets parsed", str(len(ctx.tickets())), "54")
     finally:
         if saved:

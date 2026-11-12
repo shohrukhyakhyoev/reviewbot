@@ -52,9 +52,16 @@ def main() -> int:
         ctx_lines.append(f"reviewbot current ticket: {tid} — {row.get('Title', '?')}; mode {mode}; "
                          f"state {row.get('State', '?')} (tickets/status.md; pointer set by the human via /ticket).")
         ctx_lines.append(f"Mode rules for {mode}: {ctx.MODE_RULES.get(mode, 'unknown mode; ask the human.')}")
+        scope = row.get("Own scope", "all")
+        split = mode == "Own" and scope not in ("", "all", "—")
+        if split:
+            ctx_lines.append(f"{tid} is a split Own ticket: {ctx.SPLIT_RULES.format(scope=scope)}")
         want = STYLE_FOR_MODE.get(mode)
         have = output_style()
-        if want and have != want:
+        if split and have not in ("coach", "Learning"):
+            warnings.append(f"{tid} is a split Own ticket; use /output-style Learning for the wiring, "
+                            f"then /output-style coach for the core (current: '{have}').")
+        elif not split and want and have != want:
             warnings.append(f"{tid} is {mode} mode but the output style is '{have}'. Run: /output-style {want}")
         wl = ctx.read(ctx.worklog_path(tid))
         if wl:
