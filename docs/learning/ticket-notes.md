@@ -16,12 +16,16 @@ Edit the tables, but keep their shape (slugs in backticks, `;`-separated lists, 
 - **Tech page or concept note?** Would the note still be true after swapping the technology?
   Yes → concept. No → tech page. Product-named roadmap items (Redis, Kafka, PostgreSQL, Docker,
   GitHub Actions, Resilience4j) are ticked off via their tech page.
-- **Status that passes the gate:** `lite` (December minimum: own-words summary + "where it shows up"
-  + one interview question) or `understood` (full template). `draft` does not pass.
+- **Status that passes the gate:** `lite` (December minimum: the human's own-words sections + "where it shows up"
+  + one interview question, **and no section left as a template prompt**: Claude's sections are filled too) or
+  `understood` (full template, every claim verified). `draft` does not pass.
 - Each listed note must also **mention the ticket ID** in its "Where it shows up" section.
-- **Who writes:** notes are written through `/notes write <slug>`: the human answers in chat in their own words and
-  Claude only fixes grammar, spelling, word choice and structure (no added ideas); Claude sets the status when the
-  bar is met. ADRs stay human-written (`/notes check` reviews them with questions only).
+- **Who writes:** two parts. The human's sections are written through `/notes write <slug>`: the human answers in
+  chat in their own words and Claude only fixes grammar, spelling, word choice and structure there. Claude's
+  sections (concept: Mechanism, What breaks, Contrast; tech: APIs, gotchas, How we test, Linked concepts) are
+  written by Claude after the interview, labelled `(Claude)`, sourced from spec/code/official docs, with a
+  `Correction (Claude)` under any human answer that stayed wrong. Claude sets the status when the bar is met.
+  ADRs stay human-written (`/notes check` reviews them with questions only).
 - **Review-driven candidates:** `docs/learning/principles.md` tallies the principles java-mentor cites. One cited
   in reviews of ≥ 2 tickets becomes a candidate: append to its registry slug's note, or add a new registry row here.
 
