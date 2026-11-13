@@ -15,6 +15,8 @@ entry in `docs/learning/ticket-notes.md`.
 | Fail fast (codec symmetry) | — | E1-0 | 1 | — |
 | Exhaustive switch over a closed set (Java 21) | — | E1-0 | 1 | — |
 | Types that tell the truth (nullability) | — | E1-0 | 1 | — |
-| Actionable failure messages | — | E1-0 | 1 | — |
-| Comments match the code | — | E1-0 | 1 | — |
-| Fail fast on malformed input | — | E1-0 | 1 | — |
+| Actionable failure messages | — | E1-0, E1-1 | 2 | yes: propose a registry entry |
+| Comments match the code | — | E1-0, E1-1 | 2 | yes: propose a registry entry |
+| Fail fast on malformed input | — | E1-0, E1-1 | 2 | yes: propose a registry entry |
+| Canonical form (parse inverts render exactly) | — | E1-1 | 1 | — |
+| DRY (one place for the key format) | — | E1-1 | 1 | — |

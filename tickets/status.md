@@ -27,7 +27,7 @@ State and Actual h through `/ticket` (→ `wip`) and `/close` (→ `done`).
 | E2-3 | Flyway V1 migration | S | Delegate | — | done | core | 1 | 2 | E2-0, E2-2 |
 | E2-4 | Topic provisioning | S | Delegate | — | done | core | 1 | 3 | E2-2 |
 | E1-0 | Event envelope, validation & header codecs | M | Pair | — | done | core | 3.5 | 3 | E2-0 |
-| E1-1 | PR key + Redis key builders | S | Pair | — | todo | core | 2 | — | E2-0 |
+| E1-1 | PR key + Redis key builders | S | Pair | — | done | core | 2 | 1 | E2-0 |
 | E1-2 | Failure classification + outcome types | M | Pair | — | todo | core | 3.5 | — | E2-0 |
 | E1-3 | DLQ envelope builder | S | Delegate | — | todo | core | 1 | — | E1-0, E1-2 |
 | E1-4 | ReviewGenerator port + domain types | S | Pair | — | todo | core | 2 | — | E2-0 |
