@@ -8,13 +8,16 @@ last-reviewed: YYYY-MM-DD
 ---
 
 <!-- One page per roadmap concept. Technology-independent: if the note stops being true when you swap
-     the technology, it belongs on a tech page instead. YOU write every section; Claude may only pre-fill
-     "Where it shows up". "lite" = sections marked (lite) filled; "understood" = all sections. -->
+     the technology, it belongs on a tech page instead. TWO PARTS: the human writes "In my own words" and the
+     interview answers (Claude fixes grammar only, and adds a "Correction (Claude)" under a wrong answer).
+     Claude writes the sections headed "(Claude)" after the interview: facts only, from the spec, the code
+     (real file:line) and official docs, short, one concrete reviewbot example each, "unverified" if unchecked.
+     "lite" = every section filled, none left as a prompt; "understood" = every claim verified. -->
 
 ## In my own words (lite)
 <3–6 sentences, no copy-paste. What problem does this concept solve? Explain it to a junior teammate.>
 
-## Mechanism
+## Mechanism (Claude)
 <How it actually works: the moving parts, the guarantee it gives, the cost it has. A small diagram is fine.>
 
 ## Where it shows up in reviewbot (lite)
@@ -22,11 +25,11 @@ last-reviewed: YYYY-MM-DD
 |---|---|---|---|
 | E4-0 | `review-worker/.../OffsetTracker.java:42` | I4, §8.4 | releases the permit on every completion |
 
-## What breaks if it's misused
+## What breaks if it's misused (Claude)
 <Link the trap or invariant: e.g. "synchronized around blocking I/O pins the carrier (CLAUDE.md trap, §19.1)".
  Describe the failure as a concrete scenario.>
 
-## Contrast and alternatives
+## Contrast and alternatives (Claude)
 <What else could solve this? Why does reviewbot use this one? If the spec Appendix decided it, link "Appendix #n"
  here instead of writing an ADR.>
 

@@ -41,13 +41,18 @@ Build check with `python scripts/claude/verify.py` (summarized output, full log 
 notes, or the human chooses between ≥ 2 viable options the spec didn't dictate, end your reply with ONE line:
 `note-worthy: <what> → concept note <slug>` / `→ tech page <slug>` / `→ ADR candidate`. Don't stop the work,
 don't repeat a nudge in the same session, and add ADR candidates to the worklog's "Decisions pending".
-**Notes are written in chat, in the human's words** (`/notes write <slug>`, no Notion round-trip). Claude
-interviews (one question at a time, guiding with questions and pointers, never the answer); the human answers in
-their own words; Claude may fix **only grammar, spelling, word choice and structure**, then writes the result to
-the note (Notion first, inbox fallback). **Claude adds no ideas**: no facts, examples, analogies or explanations the
-human did not say. A wrong, vague or missing answer gets a follow-up question, never a silent fix or a filled-in
-sentence. Claude decides when a note meets its bar (`lite`/`understood`) and sets the status. **ADRs stay
-human-written**; `/notes check <slug|ADR file>` reviews a note or ADR with questions only.
+**Notes have two parts, so the page is something to learn from later, not just proof of understanding.**
+*The human's sections* ("In my own words", "Mental model", the interview answers) are written in chat
+(`/notes write <slug>`): Claude interviews (one question at a time, questions and pointers, never the answer),
+the human answers in their own words, Claude fixes **only grammar, spelling, word choice and structure** and adds
+no ideas there. A wrong, vague or missing answer first gets a follow-up question. *Claude's sections* (concept
+note: Mechanism, What breaks, Contrast; tech page: APIs, gotchas, How we test, Linked concepts) are written by
+Claude after the interview, labelled `(Claude)`: factual, sourced from the spec, the code (real file:line) and
+official docs, concrete reviewbot examples, short; anything unverified is said to be unverified, never guessed.
+If the human's answer is still wrong or unknown after the follow-up, Claude adds a `Correction (Claude)` under it
+so the page ends up right. **A note is `lite` only when no section is left as a template prompt**; Claude sets the
+status (Notion first, inbox fallback). **ADRs stay human-written**; `/notes check <slug|ADR file>` reviews a note
+or ADR with questions only.
 
 ## Tech stack (do not substitute)
 

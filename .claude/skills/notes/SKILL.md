@@ -14,11 +14,14 @@ Inbox fallback (`docs/learning/inbox/`): !`ls "${CLAUDE_PROJECT_DIR}/docs/learni
 
 ---
 
-Rules: `docs/learning/ticket-notes.md`. Templates: `docs/learning/templates/`. **Every idea in a note is the
-human's.** `scaffold` creates only the skeleton, properties and the "Where it shows up" row (real file:line found
-by grepping the code). `write` is the interview that fills the rest: the human answers in chat in their own
-words, and you may fix only grammar, spelling, word choice and structure. Never add a fact, example, analogy or
-explanation the human did not say. ADRs are not written by you (use `check`).
+Rules: `docs/learning/ticket-notes.md`. Templates: `docs/learning/templates/`. A note has **two parts**. **The
+human's sections** ("In my own words", "Mental model", the "How reviewbot uses it" Why cells, interview answers):
+every idea there is the human's; you fix only grammar, spelling, word choice and structure. **Claude's sections**
+(concept note: Mechanism, What breaks, Contrast; tech page: APIs, gotchas, How we test, Linked concepts) are
+yours to write, labelled `(Claude)`, so the page is something the human can read and learn from later.
+`scaffold` creates the skeleton, properties and the "Where it shows up" row (real file:line found by grepping the
+code). `write` is the interview for the human's sections, followed by your reference pass (below).
+ADRs are not written by you (use `check`).
 
 ## Where to look
 - **Notion first:** load the Notion tools with ToolSearch (`notion query data sources`, `notion fetch`,
@@ -46,28 +49,41 @@ Interview the human and write the note from their answers. Concept notes and tec
    matching template, and list the sections still holding template prompts (angle-bracket placeholders). Work in
    this order: **lite sections first**: tech page: "What problem it solves here", "Mental model", this ticket's
    "How reviewbot uses it" cells (Value, Why), one interview question + answer; concept note: "In my own words",
-   "Where it shows up" prose, one interview question + answer. Then, only if the human wants `understood`, the
-   remaining sections. Tell the human the plan in one line ("5 questions to lite").
+   "Where it shows up" prose, one interview question + answer. The remaining sections are your reference pass
+   (step 5), not interview questions. Tell the human the plan in one line ("2 questions, then I fill the rest").
 2. **Ask one question at a time**, grounded in this ticket (name the file:line or spec § to look at, never the
    answer). Wait for the human's answer in chat. If they have forgotten a term, point to where to look (spec §,
    file:line, their earlier answer) and let them try again; after two failed tries give a one-line conceptual
    nudge in prose, still not a sentence they can paste.
 3. **Fact-check the answer** against the spec (`ctx.py spec <§>` / `ctx.py grep <term>`), the code, and the
    contracts it names (spec wins). Wrong, vague or missing → ask a follow-up question that makes them find it
-   (same style as `check`: `[wrong|vague|missing] <question>`), at most two rounds. Do not write that part.
-   Still unresolved → leave the section as the template prompt and keep the status `draft`. Never fill the gap.
+   (same style as `check`: `[wrong|vague|missing] <question>`), at most two rounds. Do not put your own words
+   into the human's section. Still wrong or unknown after two rounds → write the human's answer as they gave it
+   (polished) and add a `Correction (Claude):` line directly under it, with the right answer and its source
+   (spec §, file:line or official docs), so the page ends up correct. Never leave a wrong answer standing alone.
 4. **Polish, then write.** Fix grammar, spelling, punctuation, word choice, and turn chat fragments into
    sentences or table cells. Keep their meaning, first person, vocabulary level and amount of detail; do not
    merge in your own phrasing of ideas. If a fix would change what they meant, ask. Write the section to the
    note (`update-page`, targeted `update_content`; batch the lite sections of one answer round into one write to
    keep approvals few), then show the exact text you wrote in one short block and say: "Written to <section>.
    Tell me if I shifted your meaning." Apply their correction the same way.
-5. **Decide done.** When every lite requirement is filled from the human's own answers, nothing is left wrong or
-   vague, and "Where it shows up" names this ticket ID with a real file:line (open the file and look), set
-   Status `lite` and Last reviewed to today, and say "Notes writing done: `<slug>` is `lite`". Set `understood`
-   only when every template section is filled and verified. If the bar is not met, say which sections are missing
-   and stay `draft`. Do not mark done to be nice.
-6. Notion unreachable → write `docs/learning/inbox/<slug>.md` instead (`notion: pending`) and say so.
+5. **Reference pass (your sections).** Fill every section still holding a template prompt: concept note:
+   Mechanism, What breaks, Contrast; tech page: APIs, Local vs production gotchas, How we test, Linked concepts.
+   Start each section with `(Claude)`. Content rules: facts only, from the spec (`ctx.py spec`), the code (open the
+   file; cite real file:line) and official docs; one concrete reviewbot example or failure scenario per section;
+   short (about 4-10 lines or a small table); say "unverified" for anything you could not check. Never invent a
+   guarantee or a number. Put file names such as `CLAUDE.md` in backticks (Notion turns a bare `CLAUDE.md` into a
+   broken link) and write table headers as "Code location (file, line)", not "file:line". Write all of them in one
+   update, then show the human what you wrote.
+6. **Decide done.** When the human's sections are filled from their own answers (with a `Correction (Claude)` where
+   needed), your reference pass left **no template prompt anywhere**, and "Where it shows up" names this ticket ID
+   with a real file:line (open the file and look), set Status `lite` and Last reviewed to today, and say "Notes
+   writing done: `<slug>` is `lite`". Set `understood` only when every section is verified. If the bar is not
+   met, say which sections are missing and stay `draft`. Do not mark done to be nice.
+7. Notion unreachable (or a write errors) → write `docs/learning/inbox/<slug>.md` instead (`notion: pending`) and
+   say so. After a Notion write, check the page by fetching it once: no mangled markup, no stray text, no section
+   still holding a template prompt. Never set Status `lite` in the same step as, or before, the content write
+   succeeds.
 
 ## `check <slug>` (or `check docs/adr/NNNN-*.md`)
 Review a note or ADR **the human wrote**. **Read-only: never edit, append to or rewrite it**, not even a typo
@@ -76,7 +92,8 @@ Review a note or ADR **the human wrote**. **Read-only: never edit, append to or 
    ask the human to paste it.
 2. **Template conformance.** Compare it against `docs/learning/templates/concept-note.md`, `tech-page.md` or
    `adr.md`:
-   - **lite:** "In my own words", "Where it shows up" (with this ticket), and one interview question with an answer.
+   - **lite:** "In my own words", "Where it shows up" (with this ticket), one interview question with an answer,
+     and no section left as a template prompt (the `(Claude)` sections are filled and sourced).
    - **understood:** every section.
    - **ADR:** at least 2 options with pros and cons, a decision, consequences, a relation to the spec, and a
      learning point.
