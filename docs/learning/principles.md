@@ -9,3 +9,12 @@ entry in `docs/learning/ticket-notes.md`.
 
 | Principle | Registry slug | Tickets | Count | Concept-note candidate |
 |---|---|---|---|---|
+| §3.3 rule 1 never retype (contract enforcement) | — | E1-0 | 1 | — |
+| Precise exception types | — | E1-0 | 1 | — |
+| Encapsulation (§19.13 codecs in one place) | — | E1-0 | 1 | — |
+| Fail fast (codec symmetry) | — | E1-0 | 1 | — |
+| Exhaustive switch over a closed set (Java 21) | — | E1-0 | 1 | — |
+| Types that tell the truth (nullability) | — | E1-0 | 1 | — |
+| Actionable failure messages | — | E1-0 | 1 | — |
+| Comments match the code | — | E1-0 | 1 | — |
+| Fail fast on malformed input | — | E1-0 | 1 | — |

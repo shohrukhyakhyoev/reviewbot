@@ -11,11 +11,11 @@ entries verbatim to the top of `docs/progress-archive.md`. The point is orientat
 
 ## Current state (update this line every session)
 
-- **Phase:** E2 — Infra & scaffold.
-- **Last ticket completed:** E2-4 (Topic provisioning).
-- **Next ticket:** E1-0 (Event envelope, validation & header codecs, mode Pair). Execution order and modes: `tickets/status.md` (`python scripts/claude/ctx.py next`).
+- **Phase:** E1 — core contracts (E2 infra scaffold done).
+- **Last ticket completed:** E1-0 (Event envelope, validation & header codecs).
+- **Next ticket:** E1-1 (PR key + Redis key builders, mode Pair). Execution order and modes: `tickets/status.md` (`python scripts/claude/ctx.py next`).
 - **Claude Code setup:** done 2026-11-12 (`docs/claude-setup-plan.md`, branch `claude-setup`). Modes per amendment 1 (16 Own tickets: the human writes the invariant/ordering cores). **No fixed date**; order: core (E1–E5) → E6 → E8 → **first deploy**, simple-first (Docker + GitHub Actions + AWS, single host) → E7, E9, E10 → EKS/Terraform (E11). Jan–Feb: exams, no project time.
-- **Build status:** `./mvnw clean verify` green locally (after E2-4, which changed no Java; CI green as of E2-1, PR #2; the E2-3 Testcontainers test and the new `kafka-topics` job get their first CI run on the E2-4 PR) — 5 reactor modules, 13 tests.
+- **Build status:** `./mvnw clean verify` green locally after E1-0 — 5 reactor modules, 101 tests, `shared` 96.5% line coverage (gate 80%). E1-0's PR is the first CI run for the Jackson dependencies and the new tests (CI also runs `SchemaMigrationTest` and the `kafka-topics` job).
 
 ---
 
@@ -38,6 +38,14 @@ The `- Learning:` line is checked by the commit-msg hook on `E?-?: …` commits:
 - Hours: est X / actual Y (Y = sum of the worklog's session lines, confirmed by the human).
 - Learning: [x] concept:<slug> (<link>) · [x] tech:<slug> (<link>) · [x] adr:<NNNN or n/a> · teach-back: pass (k/N)
 -->
+
+### [E1-0] Event envelope, validation & header codecs — 2026-11-13
+- Built: `ReviewRequestedEnvelope` (§3.1 record) + `EventType`; `EnvelopeValidator` (all fields required except force/replay, schema_version == 1, head_sha per type via an exhaustive switch expression, collects every problem); `EnvelopeSerde` (bytes ↔ envelope, bind then validate); `EnvelopeValidationException`; `HeaderCodec` + `HeaderDecodeException` (all seven §3.2 headers as typed constants, encode + decode).
+- Decisions: reading is tolerant of unknown fields but strict on types: no scalar coercion (1.9, "17", 5 for a string), no enum ordinals, `occurred_at` only as an ISO string (`StrictInstantReader`). An invalid, missing or wrongly typed envelope → `EnvelopeValidationException` (E1-2: POISON_DESERIALIZATION). A bad header → `HeaderDecodeException`, deliberately a different type; E1-2 decides the routing (the DB is the source of truth for the counters). Headers are used only via `HeaderCodec.NOT_BEFORE.encode/decode` etc. (private constructor, name and format bound together); encoders reject negatives. `toBytes` does not validate (the consumer is the trust boundary).
+- Files/modules: `shared/.../envelope/*`, `shared/.../headers/*`, `shared/pom.xml` (jackson-databind, jackson-datatype-jsr310; versions from the Boot BOM), `.claude/skills/ticket/SKILL.md` (Orient section rewritten at the human's request: concise "What this ticket is" paragraph).
+- Tests: `EnvelopeContractTest` (48: round trip, tolerant reader, one missing-field case per required field, blank/null, schema_version, head_sha matrix, 12 strict-typing rows, malformed JSON) and `HeaderCodecTest` (39: per header the name, exact wire format, round trip incl. epoch 0 and year 9999, malformed/negative/overflow, raw value never echoed). `./mvnw clean verify` green; `shared` 96.5% line coverage. Four `/review-mine` rounds (R1–R12; R12 skipped by the human).
+- Hours: est 3.5 / actual 3
+- Learning: [x] concept:arch-message-vs-event (docs/learning/inbox/arch-message-vs-event.md; Notion page 417997ba8e7c81d0adcddf8d623fd853 still draft) · [x] tech:n/a · [x] adr:n/a · teach-back: pass (3/3)
 
 ### [E2-4] Topic provisioning — 2026-11-12
 - Built: `infra/kafka/provision-topics.sh` (create-if-absent, verify-never-alter; the three §4.1 topics 6/3/3, 7d/3d/30d, cleanup=delete; `KAFKA_ENV=local|prod` → RF=1/ISR=1 or RF=3/ISR=2; `--render` prints the resolved config without a broker), one-shot `kafka-init` compose service, `infra/kafka/verify-topics.sh`, CI job `kafka-topics`, topic check in `verify-stack.sh`.
@@ -67,12 +75,6 @@ The `- Learning:` line is checked by the commit-msg hook on `E?-?: …` commits:
 - Files/modules: `.github/workflows/ci.yml`, `.github/scripts/coverage-gate.sh` (mode 100755), parent `pom.xml` (`jacoco-check-engine` execution).
 - Tests: the pipeline itself, green. Negative checks run once on throwaway draft PRs (base `e2-1-ci`), each failing at the intended step, then closed and branches deleted: failing test (Build and test), Spotless violation (Format check), 0% coverage (Coverage gate), half-covered engine class (Build and test, `ratio is 0.50, expected 0.95`). Engine rule also verified passing when both branches covered.
 
-### [E2-0] Maven multi-module skeleton — 2026-08-11
-- Built: parent POM (Java 21, Boot 3.3.5 BOM, pinned stack versions, pluginManagement) + 5-module reactor: `shared` (plain jar), `webhook-gateway`, `review-worker`, `retry-worker` (Boot apps). `infra/` is a plain directory, not a module. No business code.
-- Decisions: see key-decisions log below (groupId/packages, Maven wrapper, LF line endings).
-- Files/modules: `pom.xml`, four module POMs, three `*Application` mains + `application.yml`, `shared/.../package-info.java`, `mvnw`/`mvnw.cmd`/`.mvn/wrapper/maven-wrapper.properties`, `.gitattributes`, `infra/.gitkeep`.
-- Tests: one `@SpringBootTest` context-load test per deployable (3 total, no external services). Enforcer ban verified once by adding a test-scoped `review-worker → webhook-gateway` dependency — build failed with the intended message — then reverted.
-
 ---
 
 ## Key decisions log (cross-cutting, referenced later)
@@ -92,6 +94,8 @@ Decisions that affect more than the ticket that made them. Keep it tight.
 - **`shared` tests need Docker (E2-3):** `SchemaMigrationTest` runs in surefire (`*Test`), not failsafe, so a Docker-less machine cannot build `shared`.
 - **Topics come only from `infra/kafka/provision-topics.sh` (E2-4):** broker auto-create is off; the script never alters (drift → exit 1), and its topic names/partition counts must match the `shared` constants (E1-5). Change a partition count only via the §4.4 topic swap.
 - **`up -d --wait` does not wait for one-shot services (E2-4):** `kafka-init`/`flyway` may still be running when it returns; checks right after `up` must retry (`verify-stack.sh` does for topics).
+- **Envelope reading (E1-0):** read envelopes only via `EnvelopeSerde.fromBytes` (bind → validate), never a raw ObjectMapper. Tolerant of unknown fields, strict on types; any failure is `EnvelopeValidationException` (E1-2: POISON_DESERIALIZATION).
+- **Header codecs (E1-0):** headers only via the `HeaderCodec` constants (`HeaderCodec.NOT_BEFORE.encode/decode`); a bad header is `HeaderDecodeException`, not an envelope failure (E1-2 decides routing). Never write a second encoder (§19.13).
 
 ---
 
@@ -113,6 +117,7 @@ Things spotted mid-work that belong to a later tier/epic. Record, don't build.
 - **Testcontainers 1.19.8 (Boot 3.3.5 BOM) vs Docker Engine 29 (E2-3):** the old docker-java client may be rejected by a newer engine. Not hit locally (engine 27.5.1); if CI or a Docker upgrade fails, override `testcontainers.version` in the parent POM. First CI run with `SchemaMigrationTest` is the check.
 - **Compose Flyway mount at `/flyway/sql`** prints a harmless "not recommended" warning; use `FLYWAY_LOCATIONS=filesystem:/flyway/migrations` if it bothers anyone.
 - **E2-4 follow-ups:** (1) prod RF=3/ISR=2 is asserted only via `--render`; the verify path against a real RF=3 cluster (MSK `--describe` output) is first exercised in E11. (2) `flyway` has the same `--wait` race as `kafka-init`: `verify-stack.sh`'s schema check has no retry. (3) Strict topic-level verification means a correct-but-inherited value (e.g. `cleanup.policy` from broker defaults) reads as drift; revisit if E11 meets such topics. (4) Human: the ISR line in tech note `kafka` was written by Claude at the human's request; re-explain it in your own words.
+- **E1-0 follow-ups:** (1) review nit R12 skipped: `EnvelopeSerde.fromBytes` ignores bytes after the first JSON object; fix is `FAIL_ON_TRAILING_TOKENS` plus a test. (2) `toBytes` does not validate; E3-1 decides whether the gateway validates before producing. (3) Human's idea, post-v1: notify the user when a job lands in the DLQ. (4) Note `arch-message-vs-event` lives in `docs/learning/inbox/` because Notion writes timed out; run `/notes sync` to fill the existing Notion page 417997ba… (do not create a new one). The lines in it written by Claude at the human's request should be re-explained in the human's own words. (5) Teach-back Q3 was partial: the unknown-vs-missing-field direction was reversed; re-read §3.3 rules 1–2.
 - **Concept note `sql-upsert-constraints` has two stale answers** (human, with E5-0): the ON CONFLICT answer and the "duplicate events are impossible" interview answer; also add the §7.1 step 1 Redis-down DB fallback to the index answer.
 
 ---
