@@ -12,10 +12,10 @@ entries verbatim to the top of `docs/progress-archive.md`. The point is orientat
 ## Current state (update this line every session)
 
 - **Phase:** E1 — core contracts (E2 infra scaffold done).
-- **Last ticket completed:** E1-0 (Event envelope, validation & header codecs).
-- **Next ticket:** E1-1 (PR key + Redis key builders, mode Pair). Execution order and modes: `tickets/status.md` (`python scripts/claude/ctx.py next`).
+- **Last ticket completed:** E1-1 (PR key + Redis key builders).
+- **Next ticket:** E1-2 (Failure classification + outcome types, mode Pair). Execution order and modes: `tickets/status.md` (`python scripts/claude/ctx.py next`).
 - **Claude Code setup:** done 2026-11-12 (`docs/claude-setup-plan.md`, branch `claude-setup`). Modes per amendment 1 (16 Own tickets: the human writes the invariant/ordering cores). **No fixed date**; order: core (E1–E5) → E6 → E8 → **first deploy**, simple-first (Docker + GitHub Actions + AWS, single host) → E7, E9, E10 → EKS/Terraform (E11). Jan–Feb: exams, no project time.
-- **Build status:** `./mvnw clean verify` green locally after E1-0 — 5 reactor modules, 101 tests, `shared` 96.5% line coverage (gate 80%). E1-0's PR is the first CI run for the Jackson dependencies and the new tests (CI also runs `SchemaMigrationTest` and the `kafka-topics` job).
+- **Build status:** `./mvnw clean verify` green locally after E1-1 — 5 reactor modules, 163 tests, `shared` 97.5% line coverage (gate 80%). E1-1's PR is the first CI run for the `keys` package.
 
 ---
 
@@ -38,6 +38,14 @@ The `- Learning:` line is checked by the commit-msg hook on `E?-?: …` commits:
 - Hours: est X / actual Y (Y = sum of the worklog's session lines, confirmed by the human).
 - Learning: [x] concept:<slug> (<link>) · [x] tech:<slug> (<link>) · [x] adr:<NNNN or n/a> · teach-back: pass (k/N)
 -->
+
+### [E1-1] PR key + Redis key builders — 2026-11-13
+- Built: `PrKey` record (installation id, repo `owner/name`, PR number) with `render()` and `parse()`; `RedisKeys` builders for `delivery`, `ghcfg`, `dedup` (SHA + round), `lock` (no SHA) and the four TTL `Duration` constants (24 h / 7 d / 30 s / 5 min).
+- Decisions: every `PrKey` is valid by construction (checks in the compact constructor); `parse` accepts only the canonical form (`render()` of the result must equal the input), so one PR has one key string and one Kafka partition. Ids and PR numbers must be >= 1; repo must match `owner/name` over GitHub's charset. `ghcfg` reuses `PrKey`'s package-private validity helpers. No `skip:` builder (§19.14). `LOCK_TTL` is the Redisson watchdog timeout, never a `leaseTime`.
+- Files/modules: `shared/.../keys/{PrKey,RedisKeys}.java`; CLAUDE.md working rule 6 (sparse comments); comments trimmed in the E1-0 `shared` main files (behavior-neutral).
+- Tests: `PrKeyTest` (golden render, round trip for dots/hyphens/underscores, malformed and non-canonical matrices incl. Arabic-Indic digits, error messages name the key, constructor bounds) and `RedisKeysTest` (golden strings written from §5.2, round differs per key, lock has no SHA, input rejection, TTLs). `verify.py` green: 163 tests, `shared` 97.5%. Five `/review-mine` rounds (R1–R10, all fixed).
+- Hours: est 2 / actual 1
+- Learning: [x] concept:n/a · [x] tech:n/a · [x] adr:n/a · teach-back: pass (3/3; Q1 and Q2 needed a follow-up)
 
 ### [E1-0] Event envelope, validation & header codecs — 2026-11-13
 - Built: `ReviewRequestedEnvelope` (§3.1 record) + `EventType`; `EnvelopeValidator` (all fields required except force/replay, schema_version == 1, head_sha per type via an exhaustive switch expression, collects every problem); `EnvelopeSerde` (bytes ↔ envelope, bind then validate); `EnvelopeValidationException`; `HeaderCodec` + `HeaderDecodeException` (all seven §3.2 headers as typed constants, encode + decode).
@@ -69,12 +77,6 @@ The `- Learning:` line is checked by the commit-msg hook on `E?-?: …` commits:
 - Files/modules: `infra/docker-compose.yml`, `infra/verify-stack.sh`, `infra/README.md`, `infra/wiremock/mappings/.gitkeep`.
 - Tests: manual, no Java. Cold start (fresh images + volumes) `up -d --wait` reached all-healthy in ~90 s including image pulls. `verify-stack.sh` exit 0 with stack up (from repo root, `/tmp`, and via `./`), exit 1 with stack down. Effective broker config checked via `kafka-configs.sh`: `auto.create.topics.enable=false`, `min.insync.replicas=1`, `default.replication.factor=1`, `offsets.topic.replication.factor=1`; producing to a missing topic over the host listener returned `UNKNOWN_TOPIC_OR_PARTITION` and created nothing. `./mvnw clean verify` green.
 
-### [E2-1] CI pipeline — 2026-10-15
-- Built: `.github/workflows/ci.yml` on PRs + pushes to `main` (Spotless fast-fail → `./mvnw clean verify` → overall line gate → JaCoCo report artifact; Maven repo + wrapper cached). Engine rule in the parent POM: per-class BRANCH COVEREDRATIO ≥ 0.95 on `dev.reviewbot.worker.engine.*` (matches nothing until E4).
-- Decisions: overall ≥ 80% line gate is `.github/scripts/coverage-gate.sh`, which sums each module's `target/site/jacoco/jacoco.csv` — `jacoco:check` is per module and cannot gate the reactor, and an aggregator module would fight E2-0's enforcer ban and Boot repackaging. Consequence: a module's coverage counts only from its own tests. Engine threshold is a property (`jacoco.engine.branch.minimum`, 0.95); raise to 1.00 if unreachable branches never appear. Runner pinned to `ubuntu-24.04` (`ubuntu-latest` moves to 26 on 2026-10-19). "Lint" = Spotless on Java sources only.
-- Files/modules: `.github/workflows/ci.yml`, `.github/scripts/coverage-gate.sh` (mode 100755), parent `pom.xml` (`jacoco-check-engine` execution).
-- Tests: the pipeline itself, green. Negative checks run once on throwaway draft PRs (base `e2-1-ci`), each failing at the intended step, then closed and branches deleted: failing test (Build and test), Spotless violation (Format check), 0% coverage (Coverage gate), half-covered engine class (Build and test, `ratio is 0.50, expected 0.95`). Engine rule also verified passing when both branches covered.
-
 ---
 
 ## Key decisions log (cross-cutting, referenced later)
@@ -96,6 +98,8 @@ Decisions that affect more than the ticket that made them. Keep it tight.
 - **`up -d --wait` does not wait for one-shot services (E2-4):** `kafka-init`/`flyway` may still be running when it returns; checks right after `up` must retry (`verify-stack.sh` does for topics).
 - **Envelope reading (E1-0):** read envelopes only via `EnvelopeSerde.fromBytes` (bind → validate), never a raw ObjectMapper. Tolerant of unknown fields, strict on types; any failure is `EnvelopeValidationException` (E1-2: POISON_DESERIALIZATION).
 - **Header codecs (E1-0):** headers only via the `HeaderCodec` constants (`HeaderCodec.NOT_BEFORE.encode/decode`); a bad header is `HeaderDecodeException`, not an envelope failure (E1-2 decides routing). Never write a second encoder (§19.13).
+- **PR and Redis keys (E1-1):** build keys only via `PrKey.render()` / `RedisKeys`, read Kafka keys only via `PrKey.parse` (canonical form only; repo must be `owner/name`). No `skip:` builder (§19.14).
+- **Comments are sparse (setup, 2026-11-13):** CLAUDE.md working rule 6: only a non-obvious why; no restating the code, no redundant `@throws`/`@param`.
 
 ---
 
@@ -118,6 +122,7 @@ Things spotted mid-work that belong to a later tier/epic. Record, don't build.
 - **Compose Flyway mount at `/flyway/sql`** prints a harmless "not recommended" warning; use `FLYWAY_LOCATIONS=filesystem:/flyway/migrations` if it bothers anyone.
 - **E2-4 follow-ups:** (1) prod RF=3/ISR=2 is asserted only via `--render`; the verify path against a real RF=3 cluster (MSK `--describe` output) is first exercised in E11. (2) `flyway` has the same `--wait` race as `kafka-init`: `verify-stack.sh`'s schema check has no retry. (3) Strict topic-level verification means a correct-but-inherited value (e.g. `cleanup.policy` from broker defaults) reads as drift; revisit if E11 meets such topics. (4) Human: the ISR line in tech note `kafka` was written by Claude at the human's request; re-explain it in your own words.
 - **E1-0 follow-ups:** (1) review nit R12 skipped: `EnvelopeSerde.fromBytes` ignores bytes after the first JSON object; fix is `FAIL_ON_TRAILING_TOKENS` plus a test. (2) `toBytes` does not validate; E3-1 decides whether the gateway validates before producing. (3) Human's idea, post-v1: notify the user when a job lands in the DLQ. (4) Note `arch-message-vs-event` is now complete in Notion (status `lite`). The lines in it written by Claude at the human's request (the extra "In my own words" bullets and the interview answer) should be re-explained in the human's own words. (5) Teach-back Q3 was partial: the unknown-vs-missing-field direction was reversed; re-read §3.3 rules 1–2.
+- **E1-1 follow-ups:** (1) ADR candidate (human to write or skip): enforce `PrKey` validity in the compact constructor (chosen) vs only in `parse`. (2) Concept-note candidates from reviews: "Fail fast on malformed input", "Actionable failure messages", "Comments match the code". (3) `verify.py` given extra Maven args (e.g. `-pl shared -am`) fails with "No goals have been specified"; pass `clean verify` explicitly. (4) Comments are not yet trimmed in the E1-0 and schema tests. (5) Teach-back: re-read §8.3 and I2 (the per-PR drainer serializes a PR on one instance; the Redisson lock covers two instances), and that a skipped SHA must never be written under `dedup:`.
 - **Concept note `sql-upsert-constraints` has two stale answers** (human, with E5-0): the ON CONFLICT answer and the "duplicate events are impossible" interview answer; also add the §7.1 step 1 Redis-down DB fallback to the index answer. Since 2026-11-13 the page carries a `Correction (Claude)` under each stale answer; the human should still re-answer them in their own words.
 - **Notes format (setup, 2026-11-13):** notes now have two parts: the human's sections in their own words, and `(Claude)` reference sections (Mechanism, What breaks, Contrast; tech: APIs, gotchas, How we test, Linked concepts), with a `Correction (Claude)` under a wrong human answer. `lite` means no section is left as a template prompt. Backfilled: `sql-upsert-constraints`, `arch-message-vs-event`, `kafka`, `postgresql`. Known cosmetic glitch: Notion auto-links bare `CLAUDE.md` and "file:line" on older pages; new pages use backticks.
 

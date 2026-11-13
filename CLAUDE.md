@@ -24,6 +24,13 @@ This file holds only what cannot be inferred from the code or the spec.
    `<ID>: <title>` → push → PR → rebase-merge on green CI → back to `main`. Sessions
    start cold; PROGRESS.md and `.claude/worklog/<ID>.md` are the memory.
 
+6. **Comments: sparse.** Write a comment only when the code cannot say it: a non-obvious *why*
+   (spec rule, invariant, trap, surprising library behavior). No comments that restate the code,
+   no section dividers, no `@throws`/`@param`/`@return` lines that repeat the signature, no spec
+   citations on every member. One short Javadoc line per public type or method at most; the spec
+   and `PROGRESS.md` hold the design story. Prefer a better name over a comment. Tests need none
+   unless an input is surprising (say why it is in the case list).
+
 ## Ticket modes (Mode column of `tickets/status.md` — the human's decision, never change it)
 
 | Mode | Who writes the code | Output style | Claude's job |

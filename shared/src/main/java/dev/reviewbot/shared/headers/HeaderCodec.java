@@ -7,26 +7,16 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * The §3.2 Kafka headers: each header is ONE constant carrying its name AND its format, so a call
- * site cannot pair {@code first_deferred_at} with the wrong encoding (§19.13 — a codec mismatch
- * between the workers is a silent interop bug). Both workers use these constants; nobody
- * re-implements a codec.
+ * The §3.2 Kafka headers. Each is one constant carrying its name and its format, so a call site
+ * cannot pair a name with the wrong encoding (§19.13). Values are {@code byte[]}; callers do the
+ * Kafka {@code Headers} plumbing.
  *
- * <p>Kafka-free: values are {@code byte[]}, callers do the {@code Headers} plumbing. Formats:
- * timestamps = epoch-millisecond decimal strings; counters = decimal-int strings; {@code
- * failure_class}/{@code trace_id} = plain UTF-8 strings.
- *
- * <p>Encoders reject what the decoders would reject (fail fast at the buggy writer, not in the other
- * worker): a negative counter or a pre-1970 timestamp throws {@link IllegalArgumentException}.
- * Decoders throw {@link HeaderDecodeException}.
+ * <p>Encoders reject what decoders would reject (negative counter, pre-1970 timestamp) with {@link
+ * IllegalArgumentException}, failing at the writer. Decoders throw {@link HeaderDecodeException}.
  */
 public final class HeaderCodec {
 
-  /**
-   * One header: its Kafka name plus how its value is encoded and decoded. Only {@link HeaderCodec}
-   * can construct one and the raw encoder/decoder are not exposed, so a call site can neither mint
-   * its own {@code first_deferred_at} codec nor bypass the checks below (§19.13).
-   */
+  /** A header's name plus its codec. Only {@link HeaderCodec} can construct one. */
   public static final class Header<T> {
     private final String name;
     private final Function<T, byte[]> encoder;
@@ -46,9 +36,6 @@ public final class HeaderCodec {
       return encoder.apply(Objects.requireNonNull(value, "header value must not be null"));
     }
 
-    /**
-     * @throws HeaderDecodeException naming this header (never the raw bytes)
-     */
     public T decode(byte[] value) {
       try {
         return decoder.apply(value);
@@ -58,7 +45,7 @@ public final class HeaderCodec {
     }
   }
 
-  // Timestamps: epoch-ms strings.
+  // Timestamps are epoch-ms decimal strings, counters decimal-int strings, the rest UTF-8.
   public static final Header<Instant> NOT_BEFORE =
       new Header<>("not_before", HeaderCodec::encodeEpochMs, HeaderCodec::decodeEpochMs);
   public static final Header<Instant> FIRST_RECEIVED_AT =
@@ -66,13 +53,11 @@ public final class HeaderCodec {
   public static final Header<Instant> FIRST_DEFERRED_AT =
       new Header<>("first_deferred_at", HeaderCodec::encodeEpochMs, HeaderCodec::decodeEpochMs);
 
-  // Counters: decimal-int strings.
   public static final Header<Integer> ERROR_ATTEMPTS =
       new Header<>("error_attempts", HeaderCodec::encodeCount, HeaderCodec::decodeCount);
   public static final Header<Integer> DEFER_ATTEMPTS =
       new Header<>("defer_attempts", HeaderCodec::encodeCount, HeaderCodec::decodeCount);
 
-  // Plain strings.
   public static final Header<String> FAILURE_CLASS =
       new Header<>("failure_class", HeaderCodec::encodeString, HeaderCodec::decodeString);
   public static final Header<String> TRACE_ID =
@@ -91,8 +76,6 @@ public final class HeaderCodec {
 
   private HeaderCodec() {}
 
-  // ---- epoch-ms ----
-
   private static byte[] encodeEpochMs(Instant instant) {
     long epochMs = instant.toEpochMilli();
     if (epochMs < 0) {
@@ -104,8 +87,6 @@ public final class HeaderCodec {
   private static Instant decodeEpochMs(byte[] value) {
     return Instant.ofEpochMilli(parseNonNegativeLong(value, "epoch-ms"));
   }
-
-  // ---- counters ----
 
   private static byte[] encodeCount(int count) {
     if (count < 0) {
@@ -122,8 +103,6 @@ public final class HeaderCodec {
     return (int) count;
   }
 
-  // ---- strings ----
-
   private static byte[] encodeString(String value) {
     return utf8(value);
   }
@@ -134,8 +113,6 @@ public final class HeaderCodec {
     }
     return new String(value, StandardCharsets.UTF_8);
   }
-
-  // ---- shared parsing: check present, convert, check the number is sane ----
 
   private static long parseNonNegativeLong(byte[] value, String kind) {
     if (value == null || value.length == 0) {
