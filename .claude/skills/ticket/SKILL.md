@@ -13,18 +13,19 @@ The bundle above is the **complete input** for this ticket (CLAUDE.md working ru
 `docs/spec.md` or `tickets/v1-backlog.md` whole. For more spec text use
 `python scripts/claude/ctx.py spec <§>` (e.g. `7.1`, `8.intro`, `appendix:11`) or `ctx.py grep <term>`.
 
-## 1. Orient (≤ 10 lines, then stop if anything blocks)
-- Ticket, mode, size, estimate.
-- Dependencies: if the bundle shows ⚠ NOT ALL DONE, stop and say which.
-- Ticket-vs-spec conflicts you notice: **the spec wins.** Name the conflict; don't silently pick.
-- Unresolved references listed in the bundle: resolve them with `ctx.py grep` and say what you found.
-- Output style: the mode expects the style shown in the bundle. If the session's style differs
-  (SessionStart warns), ask the human to run `/output-style <style>`. You cannot switch it yourself.
-- Model: the bundle names the recommended session model (Opus for Own, Sonnet for Delegate/Pair). If it differs,
-  tell the human to switch with `/model`.
-- **Notes this ticket requires** (from the bundle's "Required notes"): list each one on a line, e.g.
-  `concept concurrency-semaphore (new) · tech kafka (append section)`, plus whether an ADR is required or
-  conditional. If there are none, say "no notes required".
+## 1. Orient (≤ 12 lines total, plain words, then stop if anything blocks)
+Open with a **"What this ticket is"** paragraph (3–4 lines, no undefined jargon): what gets built, who
+calls it and when (gateway / review-worker / retry-worker), where it sits in the flow
+webhook → envelope → Kafka → worker, and what is explicitly out of scope. Define any term the human
+might not know (e.g. serde, codec) in one clause.
+Then ONE status line: `Mode · size · est · deps` (if the bundle shows ⚠ NOT ALL DONE, stop and say which).
+Then only if non-empty, one line each:
+- Ticket-vs-spec conflict: **the spec wins.** Name the conflict; don't silently pick.
+- Unresolved references in the bundle: resolve with `ctx.py grep` and say what you found.
+- Output style or model mismatch (the bundle names both; Opus for Own, Sonnet for Delegate/Pair): tell the
+  human to run `/output-style <style>` / `/model`. You cannot switch either yourself. Say nothing when they match.
+- Required notes (from the bundle): e.g. `concept concurrency-semaphore (new) · tech kafka (append section)`,
+  ADR required / conditional / none. If there are none, say "no notes required".
 
 ## 2. Book-keeping
 - In `tickets/status.md` set this ticket's **State** cell to `wip` (never touch the Mode cell).
