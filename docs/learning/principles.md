@@ -17,7 +17,7 @@ entry in `docs/learning/ticket-notes.md`.
 | Types that tell the truth (nullability) | — | E1-0 | 1 | — |
 | Actionable failure messages | — | E1-0, E1-1, E1-2 | 3 | yes: propose a registry entry |
 | Comments match the code | — | E1-0, E1-1, E1-2 | 3 | yes: propose a registry entry |
-| Fail fast on malformed input | — | E1-0, E1-1 | 2 | yes: propose a registry entry |
+| Fail fast on malformed input | — | E1-0, E1-1, E1-4 | 3 | yes: propose a registry entry |
 | Canonical form (parse inverts render exactly) | — | E1-1 | 1 | — |
 | DRY (one place for the key format) | — | E1-1 | 1 | — |
 | I5 exactly one outcome (RetryDecision covers every failure) | — | E1-2 | 1 | — |
@@ -27,7 +27,11 @@ entry in `docs/learning/ticket-notes.md`.
 | Types that tell the truth (closed set, not strings) | — | E1-2 | 1 | — |
 | Optional never as a field or parameter | — | E1-2 | 1 | — |
 | §7.1 breaker open ⇒ BREAKER_PARKED with frozen counters (§11.2) | circuit-breaker | E1-2 | 1 | — |
-| Names that say intent | — | E1-2 | 1 | — |
+| Names that say intent | — | E1-2, E1-4 | 2 | yes: propose a registry entry |
 | DRY | — | E1-2 | 1 | — |
 | §10.1 route by kind first (I5 catch-all classifies correctly) | circuit-breaker | E1-2 | 1 | — |
 | YAGNI | — | E1-2 | 1 | — |
+| Acceptance criteria met as written | — | E1-4 | 1 | — |
+| Comments for the non-obvious why (CLAUDE.md rule 6) | — | E1-4 | 1 | — |
+| Precise exception types (one contract per package) | — | E1-4 | 1 | — |
+| One behaviour per test, in the test class named for it | — | E1-4 | 1 | — |

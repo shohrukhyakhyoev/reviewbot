@@ -5,6 +5,14 @@ Verbatim, never edited. Not auto-read by any session; open it when you need hist
 
 ---
 
+### [E2-4] Topic provisioning — 2026-11-12
+- Built: `infra/kafka/provision-topics.sh` (create-if-absent, verify-never-alter; the three §4.1 topics 6/3/3, 7d/3d/30d, cleanup=delete; `KAFKA_ENV=local|prod` → RF=1/ISR=1 or RF=3/ISR=2; `--render` prints the resolved config without a broker), one-shot `kafka-init` compose service, `infra/kafka/verify-topics.sh`, CI job `kafka-topics`, topic check in `verify-stack.sh`.
+- Decisions: any drift on an existing topic (partitions, RF, retention, cleanup, min ISR) exits 1 and nothing is altered; a partition change goes through the §4.4 topic swap. Verification is strict: settings must be set at topic level (a value only inherited from broker defaults reads as drift). `TOPIC_TABLE` is a test hook, refused without `ALLOW_TOPIC_TABLE_OVERRIDE=1`. The script is authoritative for infra; the `shared` constants (E1-5) must be kept in sync. `up -d --wait` does not wait for one-shot services (verify-stack retries the topic check). Notes are now written in chat via `/notes write` (setup amendment 4).
+- Files/modules: `infra/kafka/provision-topics.sh`, `infra/kafka/verify-topics.sh`, `infra/docker-compose.yml` (kafka-init), `infra/verify-stack.sh`, `infra/README.md`, `.github/workflows/ci.yml`, setup docs for the notes flow (`CLAUDE.md`, `/notes` skill, guard message).
+- Tests: `verify-topics.sh` (the `kafka-topics` CI job; run locally and green): prod render asserted; run 1 creates 3 topics; `--describe` asserts partitions/RF/retention/cleanup/min ISR; run 2 all UNCHANGED with identical describe (same TopicIds); wrong partition count and drifted retention refused (rc 1, topic untouched); TOPIC_TABLE guard and malformed row (rc 2). `./mvnw clean verify` green (no Java changed). The CI job's first real run is this PR.
+- Hours: est 1 / actual 3
+- Learning: [x] concept:n/a · [x] tech:kafka (https://app.notion.com/p/416997ba8e7c818e8cf5f4da2f174473) · [x] adr:n/a · teach-back: pass (1/1)
+
 ### [E2-3] Flyway V1 migration — 2026-11-12
 - Built: `infra/db/migration/V1__init.sql` (§5.1 verbatim: reviews, installations, dlq_entries, both UNIQUEs, four indexes incl. partial `idx_reviews_last`); one-shot `flyway` compose service (`flyway/flyway:10.10.0-alpine`, mounts `infra/db/migration`, runs after Postgres is healthy); schema check in `infra/verify-stack.sh`.
 - Decisions: apps do not self-migrate (O1): compose service locally, k8s Job in E11. Flyway image pinned to 10.10.0 = the Boot 3.3.5 BOM version (bump together). Applied migrations are immutable: changes go in V2+ (checksum mismatch fails the run). Parent POM passes `reviewbot.migrations.dir` to surefire so tests find `infra/` from any cwd.

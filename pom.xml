@@ -46,6 +46,7 @@
     <!-- Plugin versions -->
     <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
     <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+    <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
     <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
     <maven-failsafe-plugin.version>3.5.2</maven-failsafe-plugin.version>
     <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
@@ -77,6 +78,14 @@
         <groupId>dev.reviewbot</groupId>
         <artifactId>shared</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <!-- Test fixtures of `shared` (e.g. StaticReviewGenerator) for downstream module tests. -->
+      <dependency>
+        <groupId>dev.reviewbot</groupId>
+        <artifactId>shared</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
       </dependency>
 
       <!-- Plain Kafka clients: the parallel consumer in review-worker is hand-built
@@ -133,6 +142,11 @@
               </path>
             </annotationProcessorPaths>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>${maven-jar-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
