@@ -1,0 +1,4 @@
+{ "schema_version": 1, "event_id": "c1a2-uuid", "delivery_id": "d-1", "type": "REVIEW_REQUESTED",
+  "occurred_at": "2026-07-05T10:00:00Z", "installation_id": 12345, "repo_full_name": "acme/app",
+  "pr_number": 17, "head_sha": "abc123", "force": false, "replay": false,
+  "future_field" :  { "a": 1.50, "b": [1,  2] } }

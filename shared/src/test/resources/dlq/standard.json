@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "failure_class": "PR_NOT_FOUND",
+    "installation_id": 12345,
+    "repo_full_name": "acme/app",
+    "pr_number": 17,
+    "head_sha": "abc123",
+    "error_attempts": 2,
+    "defer_attempts": 1,
+    "exception": {
+      "type": "GitHubNotFound",
+      "message": "PR gone",
+      "http_status": 404,
+      "body_snippet": "{\"message\":\"Not Found\"}",
+      "body_snippet_note": "may echo customer input"
+    },
+    "first_received_at": "2026-07-05T10:00:00Z",
+    "dlq_at": "2026-07-05T10:05:00Z",
+    "origin": { "topic": "reviews.main", "partition": 3, "offset": 42 },
+    "trace_id": "trace-1"
+  },
+  "original_event": {
+    "schema_version": 1,
+    "event_id": "c1a2-uuid",
+    "delivery_id": "d-1",
+    "type": "REVIEW_REQUESTED",
+    "occurred_at": "2026-07-05T10:00:00Z",
+    "installation_id": 12345,
+    "repo_full_name": "acme/app",
+    "pr_number": 17,
+    "head_sha": "abc123",
+    "force": false,
+    "replay": false,
+    "future_field": { "a": 1.50, "b": [1, 2] }
+  }
+}

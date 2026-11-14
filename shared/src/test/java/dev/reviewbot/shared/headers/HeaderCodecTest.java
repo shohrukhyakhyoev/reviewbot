@@ -55,17 +55,36 @@ class HeaderCodecTest {
   }
 
   @Test
-  void allListsExactlyTheSevenSpecHeaders() {
+  void allListsExactlyTheSpecHeaders() {
     assertThat(HeaderCodec.ALL)
         .extracting(Header::name)
         .containsExactlyInAnyOrder(
             "not_before",
             "error_attempts",
             "defer_attempts",
+            "installation_id",
             "failure_class",
             "first_received_at",
             "first_deferred_at",
             "trace_id");
+  }
+
+  @Test
+  void installationIdRoundTripsAsDecimalString() {
+    byte[] encoded = HeaderCodec.INSTALLATION_ID.encode(12345L);
+
+    assertThat(new String(encoded, StandardCharsets.UTF_8)).isEqualTo("12345");
+    assertThat(HeaderCodec.INSTALLATION_ID.decode(encoded)).isEqualTo(12345L);
+  }
+
+  @Test
+  void installationIdRejectsZeroAtBothEnds() {
+    assertThatThrownBy(() -> HeaderCodec.INSTALLATION_ID.encode(0L))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> HeaderCodec.INSTALLATION_ID.decode("0".getBytes(StandardCharsets.UTF_8)))
+        .isInstanceOf(HeaderDecodeException.class);
+    assertThatThrownBy(() -> HeaderCodec.INSTALLATION_ID.decode("abc".getBytes(StandardCharsets.UTF_8)))
+        .isInstanceOf(HeaderDecodeException.class);
   }
 
   // ---- timestamps (not_before, first_received_at, first_deferred_at) ----

@@ -29,7 +29,7 @@ State and Actual h through `/ticket` (→ `wip`) and `/close` (→ `done`).
 | E1-0 | Event envelope, validation & header codecs | M | Pair | — | done | core | 3.5 | 3 | E2-0 |
 | E1-1 | PR key + Redis key builders | S | Pair | — | done | core | 2 | 1 | E2-0 |
 | E1-2 | Failure classification + outcome types | M | Pair | — | done | core | 3.5 | 1.5 | E2-0 |
-| E1-3 | DLQ envelope builder | S | Delegate | — | todo | core | 1 | — | E1-0, E1-2 |
+| E1-3 | DLQ envelope builder | S | Delegate | — | done | core | 1 | 1 | E1-0, E1-2 |
 | E1-4 | ReviewGenerator port + domain types | S | Pair | — | todo | core | 2 | — | E2-0 |
 | E1-5 | Config models + constants | M | Delegate | — | todo | core | 1.5 | — | E2-0, E1-4 |
 | E3-0 | HMAC verification filter | S | Pair | — | todo | core | 2 | — | E2-0 |

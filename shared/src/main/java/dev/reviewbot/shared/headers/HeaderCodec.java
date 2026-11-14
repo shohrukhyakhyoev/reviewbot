@@ -7,7 +7,7 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * The §3.2 Kafka headers. Each is one constant carrying its name and its format, so a call site
+ * The Kafka headers: §3.2's seven plus §10.2's {@code installation_id}. Each is one constant carrying its name and its format, so a call site
  * cannot pair a name with the wrong encoding (§19.13). Values are {@code byte[]}; callers do the
  * Kafka {@code Headers} plumbing.
  *
@@ -58,12 +58,15 @@ public final class HeaderCodec {
   public static final Header<Integer> DEFER_ATTEMPTS =
       new Header<>("defer_attempts", HeaderCodec::encodeCount, HeaderCodec::decodeCount);
 
+  public static final Header<Long> INSTALLATION_ID =
+      new Header<>("installation_id", HeaderCodec::encodeInstallationId, HeaderCodec::decodeInstallationId);
+
   public static final Header<String> FAILURE_CLASS =
       new Header<>("failure_class", HeaderCodec::encodeString, HeaderCodec::decodeString);
   public static final Header<String> TRACE_ID =
       new Header<>("trace_id", HeaderCodec::encodeString, HeaderCodec::decodeString);
 
-  /** Every §3.2 header, for completeness checks. */
+  /** Every header, for completeness checks. */
   public static final List<Header<?>> ALL =
       List.of(
           NOT_BEFORE,
@@ -71,6 +74,7 @@ public final class HeaderCodec {
           FIRST_DEFERRED_AT,
           ERROR_ATTEMPTS,
           DEFER_ATTEMPTS,
+          INSTALLATION_ID,
           FAILURE_CLASS,
           TRACE_ID);
 
@@ -101,6 +105,21 @@ public final class HeaderCodec {
       throw new HeaderDecodeException("count value is out of int range");
     }
     return (int) count;
+  }
+
+  private static byte[] encodeInstallationId(long id) {
+    if (id < 1) {
+      throw new IllegalArgumentException("installation_id header must be >= 1");
+    }
+    return utf8(Long.toString(id));
+  }
+
+  private static long decodeInstallationId(byte[] value) {
+    long id = parseNonNegativeLong(value, "installation id");
+    if (id < 1) {
+      throw new HeaderDecodeException("installation id must be >= 1");
+    }
+    return id;
   }
 
   private static byte[] encodeString(String value) {
