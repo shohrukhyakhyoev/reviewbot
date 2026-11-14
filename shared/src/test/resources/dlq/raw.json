@@ -1,0 +1,15 @@
+{
+  "kind": "RAW",
+  "schema_version": 1,
+  "raw_payload_b64": "bm90IGpzb24=",
+  "original_key_b64": "MTIzNDU6YWNtZS9hcHA6MTc=",
+  "original_headers": { "trace_id": "dHJhY2Ut", "x-null": null },
+  "origin": { "partition": 3, "offset": 42 },
+  "exception": {
+    "type": "EnvelopeValidationException",
+    "message": "invalid envelope: undecodable JSON",
+    "http_status": null,
+    "body_snippet": null
+  },
+  "dlq_at": "2026-07-05T10:05:00Z"
+}

@@ -5,6 +5,14 @@ Verbatim, never edited. Not auto-read by any session; open it when you need hist
 
 ---
 
+### [E2-3] Flyway V1 migration — 2026-11-12
+- Built: `infra/db/migration/V1__init.sql` (§5.1 verbatim: reviews, installations, dlq_entries, both UNIQUEs, four indexes incl. partial `idx_reviews_last`); one-shot `flyway` compose service (`flyway/flyway:10.10.0-alpine`, mounts `infra/db/migration`, runs after Postgres is healthy); schema check in `infra/verify-stack.sh`.
+- Decisions: apps do not self-migrate (O1): compose service locally, k8s Job in E11. Flyway image pinned to 10.10.0 = the Boot 3.3.5 BOM version (bump together). Applied migrations are immutable: changes go in V2+ (checksum mismatch fails the run). Parent POM passes `reviewbot.migrations.dir` to surefire so tests find `infra/` from any cwd.
+- Files/modules: `infra/db/migration/V1__init.sql`, `infra/docker-compose.yml`, `infra/verify-stack.sh`, `infra/README.md`, parent `pom.xml`, `shared/pom.xml` (test deps), `shared/.../db/SchemaMigrationTest.java`.
+- Tests: `SchemaMigrationTest` (10 tests; Testcontainers `postgres:16-alpine` + programmatic Flyway): clean apply, re-run no-op, three tables, both UNIQUEs, four indexes with column order, partial predicate, `round`=1 and `fence`=0 defaults. Manual: compose `flyway` run twice (apply, then "No migration necessary"); `verify-stack.sh` all green.
+- Hours: est 1 / actual 2
+- Learning: [x] concept:sql-upsert-constraints (https://app.notion.com/p/416997ba8e7c810185c7c834671b7ba8) · [x] tech:postgresql (https://app.notion.com/p/416997ba8e7c8187831ce49a5e1ee72b) · [x] adr:n/a · teach-back: pass (1/1)
+
 ### [E2-2] Local compose stack — 2026-10-15
 - Built: `infra/docker-compose.yml` (project `reviewbot`): Kafka `apache/kafka:3.8.1` (KRaft single broker, RF=1/ISR=1, `auto.create.topics.enable=false`), `postgres:16-alpine`, `redis:7-alpine`, `wiremock/wiremock:3.9.2` (empty `infra/wiremock/mappings/`). Healthchecks on all four; named volumes `kafka-data`, `postgres-data`. Plus `infra/verify-stack.sh` and `infra/README.md`.
 - Decisions: **Kafka listeners:** `localhost:9092` for host processes (apps run from the IDE), `kafka:19092` for other containers; E2-4's provisioning should use one of these (e.g. `docker compose exec kafka ... --bootstrap-server localhost:19092`). **WireMock host port is 8089** (container 8080) so 8080 stays free for Spring Boot apps. Postgres db/user/password are all `reviewbot` (local only). Kafka image tag matches the `kafka-clients` 3.8.1 pin. Redis has no auth/persistence. `verify-stack.sh` runs checks via `docker compose exec` (no host Kafka/psql/redis clients) except WireMock, which uses host `curl`; it `cd`s into `infra/` instead of passing `-f <path>`, and sets `MSYS_NO_PATHCONV=1` — both needed because Git Bash on Windows mangles `/opt/kafka/...` container paths and, once conversion is off, unresolved POSIX `-f` paths.

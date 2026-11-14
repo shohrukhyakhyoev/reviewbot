@@ -12,10 +12,10 @@ entries verbatim to the top of `docs/progress-archive.md`. The point is orientat
 ## Current state (update this line every session)
 
 - **Phase:** E1 — core contracts (E2 infra scaffold done).
-- **Last ticket completed:** E1-2 (Failure classification + outcome types).
-- **Next ticket:** E1-3 (DLQ envelope builder, mode Delegate). Execution order and modes: `tickets/status.md` (`python scripts/claude/ctx.py next`).
+- **Last ticket completed:** E1-3 (DLQ envelope builder).
+- **Next ticket:** E1-4 (ReviewGenerator port + domain types, mode Pair). Execution order and modes: `tickets/status.md` (`python scripts/claude/ctx.py next`).
 - **Claude Code setup:** done 2026-11-12 (`docs/claude-setup-plan.md`, branch `claude-setup`). Modes per amendment 1 (16 Own tickets: the human writes the invariant/ordering cores). **No fixed date**; order: core (E1–E5) → E6 → E8 → **first deploy**, simple-first (Docker + GitHub Actions + AWS, single host) → E7, E9, E10 → EKS/Terraform (E11). Jan–Feb: exams, no project time.
-- **Build status:** `./mvnw clean verify` green locally after E1-2 — 5 reactor modules, 258 tests (coverage gates passed). E1-2's PR is the first CI run for the `failure` package.
+- **Build status:** `./mvnw clean verify` green locally after E1-3: 5 reactor modules, 289 tests (coverage gates passed, `shared` 97.8%). E1-3's PR is the first CI run for the `dlq` package.
 
 ---
 
@@ -38,6 +38,14 @@ The `- Learning:` line is checked by the commit-msg hook on `E?-?: …` commits:
 - Hours: est X / actual Y (Y = sum of the worklog's session lines, confirmed by the human).
 - Learning: [x] concept:<slug> (<link>) · [x] tech:<slug> (<link>) · [x] adr:<NNNN or n/a> · teach-back: pass (k/N)
 -->
+
+### [E1-3] DLQ envelope builder — 2026-11-14
+- Built: `shared/.../dlq/`: `DlqEnvelopeBuilder` (standard §10.2 record: metadata + `original_event`), `RawDlqEnvelopeBuilder` (poison RAW variant: base64 payload/key/headers, origin, sentinel key `poison:{partition}:{offset}`), `DlqRecord` (key, headers, JSON body), `DlqException` (exception block; text capped at 2048 chars incl. `…[truncated]`), `Origin`, package-private `DlqJson`; `HeaderCodec.INSTALLATION_ID`.
+- Decisions: `original_event` is the original JSON text spliced in verbatim, validated as the same UTF-8 text (BOM, UTF-16, trailing bytes rejected); identity comes from those bytes via `EnvelopeSerde.fromBytes`. The standard builder accepts only terminal, non-poison classes. `body_snippet_note` ("may echo customer input") is a sibling field written only when a snippet exists (spec silent on placement). `exception.message` is capped like the snippet; lone surrogates become U+FFFD. `installation_id` header added to `HeaderCodec` (§3.2's table omits it; §10.2 requires it). RAW builder takes plain key/value/headers (no kafka-clients in `shared`) and mirrors only `failure_class` (`POISON_DESERIALIZATION`). Claude wrote all code (Delegate).
+- Files/modules: 6 main + 3 test classes in `shared/.../dlq/`, golden JSON in `shared/src/test/resources/dlq/`, `HeaderCodec` (+ test).
+- Tests: golden §10.2 JSON for both variants; unknown field byte-preserved; snippet/message cap and surrogates; RAW base64 round trip incl. null key/value; sentinel key; headers via codecs. `verify.py` green: 289 tests, `shared` 97.8%. One `/code-review` round (9 findings: 5 fixed, 4 left, listed in the worklog).
+- Hours: est 1 / actual 1
+- Learning: [x] concept:gof-builder (https://app.notion.com/p/418997ba8e7c8111b671e031708817e5; `lite`) · [x] tech:n/a · [x] adr:n/a · teach-back: pass (1/1; first two attempts "idk", passed after the explanation)
 
 ### [E1-2] Failure classification + outcome types — 2026-11-14
 - Built: failure vocabulary in `shared/.../failure/`: `FailureClass` (every §10.1 string; `EXHAUSTED_{class}` derived and parsed), `FailureKind` (kind → route, counters), `Outcome` (sealed: Success/Skip/Defer/Transient/Terminal/BreakerParked; each rejects a class of the wrong kind), typed exceptions (`TerminalReviewException` is E8's `ignoreExceptions`), `ProviderError` + `ProviderErrorClassifier` (status/headers → class; ambiguous 403; Retry-After seconds/HTTP-date and reset epoch → `not_before`), `FailureClassifier` (any Throwable → one Outcome).
@@ -71,14 +79,6 @@ The `- Learning:` line is checked by the commit-msg hook on `E?-?: …` commits:
 - Hours: est 1 / actual 3
 - Learning: [x] concept:n/a · [x] tech:kafka (https://app.notion.com/p/416997ba8e7c818e8cf5f4da2f174473) · [x] adr:n/a · teach-back: pass (1/1)
 
-### [E2-3] Flyway V1 migration — 2026-11-12
-- Built: `infra/db/migration/V1__init.sql` (§5.1 verbatim: reviews, installations, dlq_entries, both UNIQUEs, four indexes incl. partial `idx_reviews_last`); one-shot `flyway` compose service (`flyway/flyway:10.10.0-alpine`, mounts `infra/db/migration`, runs after Postgres is healthy); schema check in `infra/verify-stack.sh`.
-- Decisions: apps do not self-migrate (O1): compose service locally, k8s Job in E11. Flyway image pinned to 10.10.0 = the Boot 3.3.5 BOM version (bump together). Applied migrations are immutable: changes go in V2+ (checksum mismatch fails the run). Parent POM passes `reviewbot.migrations.dir` to surefire so tests find `infra/` from any cwd.
-- Files/modules: `infra/db/migration/V1__init.sql`, `infra/docker-compose.yml`, `infra/verify-stack.sh`, `infra/README.md`, parent `pom.xml`, `shared/pom.xml` (test deps), `shared/.../db/SchemaMigrationTest.java`.
-- Tests: `SchemaMigrationTest` (10 tests; Testcontainers `postgres:16-alpine` + programmatic Flyway): clean apply, re-run no-op, three tables, both UNIQUEs, four indexes with column order, partial predicate, `round`=1 and `fence`=0 defaults. Manual: compose `flyway` run twice (apply, then "No migration necessary"); `verify-stack.sh` all green.
-- Hours: est 1 / actual 2
-- Learning: [x] concept:sql-upsert-constraints (https://app.notion.com/p/416997ba8e7c810185c7c834671b7ba8) · [x] tech:postgresql (https://app.notion.com/p/416997ba8e7c8187831ce49a5e1ee72b) · [x] adr:n/a · teach-back: pass (1/1)
-
 ---
 
 ## Key decisions log (cross-cutting, referenced later)
@@ -103,6 +103,8 @@ Decisions that affect more than the ticket that made them. Keep it tight.
 - **Failure classification (E1-2):** every throwable becomes one `Outcome` only via `FailureClassifier.classify` (I5, C-2); an outage or open provider breaker is `DependencyUnavailableException(Dependency)` → `BreakerParked` (E8 wraps `CallNotPermittedException`; Postgres/Redis adapters wrap driver errors); provider errors enter via `ProviderError`.
 - **Failure classes we named (E1-2):** transient `GITHUB_UNAVAILABLE`/`ANTHROPIC_UNAVAILABLE`/`AMBIGUOUS_POST`/`UNEXPECTED`, terminal `UNCLASSIFIED`. **E7 must page on `UNCLASSIFIED` and `EXHAUSTED_UNEXPECTED` like `LLM_REQUEST`.**
 - **PR and Redis keys (E1-1):** build keys only via `PrKey.render()` / `RedisKeys`, read Kafka keys only via `PrKey.parse` (canonical form only; repo must be `owner/name`). No `skip:` builder (§19.14).
+- **DLQ records (E1-3):** build them only via `DlqEnvelopeBuilder.forEvent(originalBytes)` or, for poison, `RawDlqEnvelopeBuilder.forPoison(...)`. `original_event` is the original bytes, never a re-serialized envelope (§3.3); terminal non-poison classes only; produce before `markComplete` (I9).
+- **`installation_id` header (E1-3):** `HeaderCodec.INSTALLATION_ID` (decimal text, >= 1), DLQ records only; §3.2's table omits it (spec update candidate). RAW records mirror only `failure_class`.
 - **Comments are sparse (setup, 2026-11-13):** CLAUDE.md working rule 6: only a non-obvious why; no restating the code, no redundant `@throws`/`@param`.
 
 ---
@@ -128,6 +130,7 @@ Things spotted mid-work that belong to a later tier/epic. Record, don't build.
 - **E1-0 follow-ups:** (1) review nit R12 skipped: `EnvelopeSerde.fromBytes` ignores bytes after the first JSON object; fix is `FAIL_ON_TRAILING_TOKENS` plus a test. (2) `toBytes` does not validate; E3-1 decides whether the gateway validates before producing. (3) Human's idea, post-v1: notify the user when a job lands in the DLQ. (4) Note `arch-message-vs-event` is now complete in Notion (status `lite`). The lines in it written by Claude at the human's request (the extra "In my own words" bullets and the interview answer) should be re-explained in the human's own words. (5) Teach-back Q3 was partial: the unknown-vs-missing-field direction was reversed; re-read §3.3 rules 1–2.
 - **E1-1 follow-ups:** (1) ADR candidate (human to write or skip): enforce `PrKey` validity in the compact constructor (chosen) vs only in `parse`. (2) Concept-note candidates from reviews: "Fail fast on malformed input", "Actionable failure messages", "Comments match the code". (3) `verify.py` given extra Maven args (e.g. `-pl shared -am`) fails with "No goals have been specified"; pass `clean verify` explicitly. (4) Comments are not yet trimmed in the E1-0 and schema tests. (5) Teach-back: re-read §8.3 and I2 (the per-PR drainer serializes a PR on one instance; the Redisson lock covers two instances), and that a skipped SHA must never be written under `dedup:`.
 - **E1-2 follow-ups:** (1) R17 skipped: `FailureClassifier.recognise` is an `instanceof` chain, so a fourth `ReviewFailureException` subtype would silently become `UNEXPECTED`; E5 extends `recognise` if it adds one. (2) E5 throws `AMBIGUOUS_POST` on timeout-after-send; the classifier cannot know that context. (3) Anthropic's `anthropic-ratelimit-*-reset` headers are not parsed, only `retry-after` and `x-ratelimit-reset`. (4) Status → class mappings beyond §10.1 (GitHub 401/403, Anthropic 401/403/404) are unverified against the real APIs (§19.10). (5) Human: read `FailureClassifier`, `ProviderErrorClassifier` and `Outcome` once, slowly; Claude wrote them. (6) Teach-back: re-read §10.1 (404 is terminal, not skip) and §7.2 (the 2 h defer SLA escalates to `COULD_NOT_SCHEDULE`; it is not the retry delay).
+- **E1-3 follow-ups:** (1) RAW `origin` and the key `poison:{p}:{o}` carry no topic (spec literal): a main- and a retry-topic poison record at the same partition and offset collide; decide before E7's `dlq_entries` uniqueness. (2) §10.2 says the indexer captures RAW key/headers, the ticket says the worker; the builder takes plain arguments, so either works. (3) RAW headers: duplicate names collapse, arrays are not cloned. (4) `INSTALLATION_ID` decode accepts "+5" and leading zeros, like the other count codecs. (5) E1-2's `ProviderError` cuts snippets with `substring(0, 512)` (can leave a lone surrogate; `DlqException` scrubs it). (6) `EXHAUSTED_POISON` is not produced by the RAW builder. (7) Human: re-read §19.13, the `HeaderCodec` Javadoc and `gof-builder`'s `Correction (Claude)` lines (the header-codec teach-back needed the explanation).
 - **Concept note `sql-upsert-constraints` has two stale answers** (human, with E5-0): the ON CONFLICT answer and the "duplicate events are impossible" interview answer; also add the §7.1 step 1 Redis-down DB fallback to the index answer. Since 2026-11-13 the page carries a `Correction (Claude)` under each stale answer; the human should still re-answer them in their own words.
 - **Notes format (setup, 2026-11-13):** notes now have two parts: the human's sections in their own words, and `(Claude)` reference sections (Mechanism, What breaks, Contrast; tech: APIs, gotchas, How we test, Linked concepts), with a `Correction (Claude)` under a wrong human answer. `lite` means no section is left as a template prompt. Backfilled: `sql-upsert-constraints`, `arch-message-vs-event`, `kafka`, `postgresql`. Known cosmetic glitch: Notion auto-links bare `CLAUDE.md` and "file:line" on older pages; new pages use backticks.
 
