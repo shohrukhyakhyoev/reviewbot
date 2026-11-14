@@ -24,6 +24,12 @@
       <groupId>dev.reviewbot</groupId>
       <artifactId>shared</artifactId>
     </dependency>
+    <dependency>
+      <groupId>dev.reviewbot</groupId>
+      <artifactId>shared</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
