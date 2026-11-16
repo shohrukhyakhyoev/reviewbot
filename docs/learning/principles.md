@@ -42,3 +42,8 @@ entry in `docs/learning/ticket-notes.md`.
 | Consistency (one vocabulary per method) | — | E3-0 | 1 | — |
 | Design for extension or prohibit it | — | E3-0 | 1 | — |
 | Test isolation (fixtures must not collide with production wiring) | — | E3-0 | 1 | — |
+| A test must fail when the property breaks (AC action matrix exact) | — | E3-1 | 1 | — |
+| Types that tell the truth (a `field` parameter carries a field name) | observability | E3-1 | 1 | — |
+| Consistency (one typing rule per reader) | — | E3-1 | 1 | — |
+| Explicit contracts (no hidden coupling between reader and validator) | — | E3-1 | 1 | — |
+| Comments match the code (no unverified claims) | — | E3-1 | 1 | — |

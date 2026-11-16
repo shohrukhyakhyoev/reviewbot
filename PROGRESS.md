@@ -12,10 +12,10 @@ entries verbatim to the top of `docs/progress-archive.md`. The point is orientat
 ## Current state (update this line every session)
 
 - **Phase:** E3 — webhook gateway (E1 core contracts and E2 infra scaffold done).
-- **Last ticket completed:** E3-0 (HMAC verification filter).
-- **Next ticket:** E3-1 (Event filter + envelope build, mode Pair). Execution order and modes: `tickets/status.md` (`python scripts/claude/ctx.py next`).
+- **Last ticket completed:** E3-1 (Event filter + envelope build).
+- **Next ticket:** E3-2 (Delivery dedup component, mode Pair). Execution order and modes: `tickets/status.md` (`python scripts/claude/ctx.py next`).
 - **Claude Code setup:** done 2026-11-12 (`docs/claude-setup-plan.md`, branch `claude-setup`). Modes per amendment 1 (16 Own tickets: the human writes the invariant/ordering cores). **No fixed date**; order: core (E1–E5) → E6 → E8 → **first deploy**, simple-first (Docker + GitHub Actions + AWS, single host) → E7, E9, E10 → EKS/Terraform (E11). Jan–Feb: exams, no project time.
-- **Build status:** `./mvnw clean verify` green locally after E3-0: 5 reactor modules, 471 tests (coverage gates passed, 98.0% overall). E3-0 is the first ticket with Spring MVC code and MockMvc tests in `webhook-gateway`.
+- **Build status:** `./mvnw clean verify` green locally after E3-1: 5 reactor modules, 554 tests (coverage gates passed, 98.0% overall; `webhook-gateway` 97.8%).
 
 ---
 
@@ -38,6 +38,14 @@ The `- Learning:` line is checked by the commit-msg hook on `E?-?: …` commits:
 - Hours: est X / actual Y (Y = sum of the worklog's session lines, confirmed by the human).
 - Learning: [x] concept:<slug> (<link>) · [x] tech:<slug> (<link>) · [x] adr:<NNNN or n/a> · teach-back: pass (k/N)
 -->
+
+### [E3-1] Event filter + envelope build — 2026-11-16
+- Built: `webhook-gateway/.../webhook/`: `EventFilter` (event type, then action, then required fields, then the draft rule → `Accept` / `Ignore` / `Malformed`), `PullRequestPayloadReader` (JSON tree by pointer; absent or null = missing), `EnvelopeFactory` (§3.1 envelope, validated by `EnvelopeValidator`), `WebhookIntake` (the one entry point; empty = answer 200), `WebhookMetrics` + `LoggingWebhookMetrics`; setting `reviewbot.gateway.review-drafts` (default false).
+- Decisions: see the Key decisions log (intake contract, filter order, draft setting, "missing" definition, gateway validates, metrics stand-in until E7). The human wrote `requiredNode` and `isSkippedDraft` (two wrong attempts first: the rule and `ready_for_review` on one line, then `||` for `&&`); Claude wrote the rest.
+- Files/modules: 9 main + 5 test files in `webhook-gateway/.../webhook/`; 9 payload fixtures and 4 golden envelopes under `src/test/resources`; `GatewayProperties`, `GatewayConfig`, `application.yml` changed.
+- Tests: golden envelope per accepted action; push, ping and closed ignored; every non-ready action on a draft under both settings; `ready_for_review` accepted on a draft fixture; each required field absent, null or wrongly typed; missing delivery id; the exception never quotes payload text. `verify.py` green: 554 tests, 98.0% overall. Three `/review-mine` rounds (R1–R5, all fixed; R1 and R2 were should-fix).
+- Hours: est 3.5 / actual 2
+- Learning: [x] concept:webhook-vs-websocket-webjob (https://app.notion.com/p/41a997ba8e7c814c8087f55a39c5c8a3; `lite`) · [x] adr:n/a · teach-back: pass (3/3; Q1 needed a follow-up)
 
 ### [E3-0] HMAC verification filter — 2026-11-16
 - Built: `webhook-gateway`: `HmacVerificationFilter` on `POST /webhook` (path and order pinned by a `FilterRegistrationBean`, ahead of every filter except character encoding), `CachedBodyHttpServletRequest` (reads the body once, replays the raw bytes, size cap), `SignatureVerifier` (HMAC-SHA256 over the raw bytes, `MessageDigest.isEqual`), `GatewayProperties` (`reviewbot.gateway.webhook-secret`, `max-body-size`).
@@ -70,14 +78,6 @@ The `- Learning:` line is checked by the commit-msg hook on `E?-?: …` commits:
 - Tests: golden §10.2 JSON for both variants; unknown field byte-preserved; snippet/message cap and surrogates; RAW base64 round trip incl. null key/value; sentinel key; headers via codecs. `verify.py` green: 289 tests, `shared` 97.8%. One `/code-review` round (9 findings: 5 fixed, 4 left, listed in the worklog).
 - Hours: est 1 / actual 1
 - Learning: [x] concept:gof-builder (https://app.notion.com/p/418997ba8e7c8111b671e031708817e5; `lite`) · [x] tech:n/a · [x] adr:n/a · teach-back: pass (1/1; first two attempts "idk", passed after the explanation)
-
-### [E1-2] Failure classification + outcome types — 2026-11-14
-- Built: failure vocabulary in `shared/.../failure/`: `FailureClass` (every §10.1 string; `EXHAUSTED_{class}` derived and parsed), `FailureKind` (kind → route, counters), `Outcome` (sealed: Success/Skip/Defer/Transient/Terminal/BreakerParked; each rejects a class of the wrong kind), typed exceptions (`TerminalReviewException` is E8's `ignoreExceptions`), `ProviderError` + `ProviderErrorClassifier` (status/headers → class; ambiguous 403; Retry-After seconds/HTTP-date and reset epoch → `not_before`), `FailureClassifier` (any Throwable → one Outcome).
-- Decisions: names the spec lacks, now fixed: transient `GITHUB_UNAVAILABLE` / `ANTHROPIC_UNAVAILABLE` / `AMBIGUOUS_POST` / `UNEXPECTED`, terminal `UNCLASSIFIED` (a 4xx no row covers). Outage or open provider breaker = `DependencyUnavailableException(Dependency)` → `BreakerParked`; bad envelope or header → `POISON_DESERIALIZATION`; `classify` looks through wrapper exceptions. `not_before` is dropped if unparseable, past, or more than 1 day out. `Defer`/`Transient`/`Terminal` carry the exception so the DLQ envelope keeps status, body snippet and cause. Claude wrote all code at the human's request (shallow ticket, time-boxed).
-- Files/modules: 12 main + 4 test files in `shared/.../failure/`.
-- Tests: one table-driven case per §10.1 row; 403 both ways; Retry-After and reset parsing; wrapped and cyclic causes; body capped and kept out of `toString`. `verify.py` green: 258 tests. Five `/review-mine` rounds (R1–R17; R16 and R17 skipped by the human).
-- Hours: est 3.5 / actual 1.5
-- Learning: [x] concept:n/a · [x] tech:n/a · [x] adr:n/a · teach-back: pass (3/3; Q1 needed a follow-up, Q2 had a correction)
 
 ---
 
@@ -117,6 +117,12 @@ Decisions that affect more than the ticket that made them. Keep it tight.
 - **Webhook filter (E3-0):** register `HmacVerificationFilter` only through `GatewayConfig`'s `FilterRegistrationBean` (`/webhook`, order `HIGHEST_PRECEDENCE + 10`), never as a `@Component`. Downstream code reads the body through the cached wrapper, so the hashed and parsed bytes are the same (§19.6).
 - **Body cap (E3-0):** `reviewbot.gateway.max-body-size` (25 MB default) is checked before the signature; over the cap answers `413`.
 - **Gateway config (E3-0):** `GatewayProperties` (`reviewbot.gateway.*`) holds the webhook secret (env `GITHUB_WEBHOOK_SECRET`; startup fails if blank; never logged). Only `GatewayConfig` sees the whole record and passes single fields down.
+- **Intake contract (E3-1):** E3-3's controller calls only `WebhookIntake.handle(X-GitHub-Event, X-GitHub-Delivery, bodyBytes)`. Empty means answer `200` and enqueue nothing (already logged and counted); present means dedup then produce. It never throws for a bad delivery, so a payload that cannot succeed is never retried.
+- **Filter order (E3-1):** event type, then action, then required fields, then the draft rule. An ignored action (e.g. `closed`) never needs the other fields; a draft with a missing field is `Malformed`, not skipped. `ready_for_review` is decided before the draft flag (P4-2), pinned by `EventFilterTest`.
+- **Draft setting (E3-1):** `reviewbot.gateway.review-drafts` (env `REVIEWBOT_REVIEW_DRAFTS`, default `false`), global per O4. A missing `pull_request.draft` is read as "not a draft" (spec silent; we err toward reviewing).
+- **Missing means absent or null (E3-1):** `PullRequestPayloadReader.requiredNode` is the single definition; a blank string also counts as missing, as in `EnvelopeValidator`. Payloads are read as a tree by JSON pointer, and `MalformedPayloadException` carries the pointer, never a value.
+- **Gateway validates what it builds (E3-1):** `EnvelopeFactory` runs `EnvelopeValidator.validate`, so a missing `X-GitHub-Delivery` is a `200` malformed, not a bad record on the topic (closes E1-0 follow-up 2 for the gateway).
+- **Metrics until E7 (E3-1):** `WebhookMetrics` (package-private port) with `LoggingWebhookMetrics`; the gateway has no Micrometer. The ticket's "metric" is log lines only for now; E7 swaps the implementation.
 
 ---
 
@@ -147,6 +153,7 @@ Things spotted mid-work that belong to a later tier/epic. Record, don't build.
 - **Concept note `sql-upsert-constraints` has two stale answers** (human, with E5-0): the ON CONFLICT answer and the "duplicate events are impossible" interview answer; also add the §7.1 step 1 Redis-down DB fallback to the index answer. Since 2026-11-13 the page carries a `Correction (Claude)` under each stale answer; the human should still re-answer them in their own words.
 - **Notes format (setup, 2026-11-13):** notes now have two parts: the human's sections in their own words, and `(Claude)` reference sections (Mechanism, What breaks, Contrast; tech: APIs, gotchas, How we test, Linked concepts), with a `Correction (Claude)` under a wrong human answer. `lite` means no section is left as a template prompt. Backfilled: `sql-upsert-constraints`, `arch-message-vs-event`, `kafka`, `postgresql`. Known cosmetic glitch: Notion auto-links bare `CLAUDE.md` and "file:line" on older pages; new pages use backticks.
 - **E3-0 follow-ups:** (1) Spec §6.1 step 4d and §11.1 assume GitHub redelivers failed webhooks, but GitHub Docs (search results, pages not opened in full) say it does not redeliver automatically (manual or scripted, 3-day window on GitHub.com, 10 s timeout). A `503` or a timeout can lose an event unless a redelivery sweep exists; E3-3 writes the 503 path and the backlog puts the sweep in E11's runbook. Verify against the full docs, then decide whether to amend the spec. (2) R9 skipped: `HandlerSpy` in `HmacVerificationFilterTest` claims `POST /webhook`, so E3-1's real controller will collide with it (ambiguous mapping); move the spy to another route then. (3) "Secret excluded from actuator output" holds only because the gateway has no actuator dependency; recheck when one arrives. (4) Nullability policy is undecided (none, NullAway with `@NullMarked`, or hand-annotated `@Nullable`): ADR candidate; IntelliJ warns on Spring overrides. (5) Human: `SignatureVerifier.verify` (encode-then-compare) was written by Claude at your request; re-explain it in your own words.
+- **E3-1 follow-ups:** (1) Unverified: whether a real `ready_for_review` payload has `pull_request.draft == false` (GitHub Docs search did not show the payload fields). The fixture uses `draft: true` as the stress case for the pinned order; add a recorded real payload when one exists. (2) E3-0 follow-up (2) is now E3-3's: its controller on `POST /webhook` collides with `HandlerSpy`; move the spy then. (3) Our choices, not in the spec: `pull_request.number` (not the top-level `number`) is the PR number; `installation.id` and the PR number must be positive; a missing `X-GitHub-Event` header is ignored as an unsupported event. (4) The malformed path can fail later than it should if GitHub changes the payload shape: nothing alerts on a rising `malformed` count until E7 replaces the logging metrics. (5) Human: re-explain event type vs action vs draft flag in your own words (it needed a table), and the `A || (B && C)` vs `A && B && C` slip in `isSkippedDraft`. (6) The spec's reason for answering a malformed payload with `200` ("GitHub must not retry") rests on the same redelivery assumption E3-0 follow-up (1) doubts; a `200` also hides a broken payload from GitHub's Recent Deliveries, and nothing alerts on the `malformed` count until E7 (ADR candidate if the spec is amended). (7) Human: teach-back Q1 was partial; re-read §6.1 step 2 and the draft table (only the `ready_for_review` delivery is reviewed, the first six are `Ignore(DRAFT)`).
 
 ---
 

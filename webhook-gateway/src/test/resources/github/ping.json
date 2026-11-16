@@ -1,0 +1,12 @@
+{
+  "zen": "Keep it logically awesome.",
+  "hook_id": 508172634,
+  "hook": {
+    "type": "App",
+    "id": 508172634,
+    "active": true,
+    "events": ["pull_request"],
+    "config": { "content_type": "json", "insecure_ssl": "0", "url": "https://hooks.example.com/webhook" }
+  },
+  "sender": { "login": "octocat", "id": 583231, "type": "User" }
+}

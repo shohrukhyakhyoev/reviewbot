@@ -21,7 +21,7 @@ class GatewayPropertiesTest {
   @NullAndEmptySource
   @ValueSource(strings = {" ", "\t\n"})
   void blankSecretFailsStartup(String secret) {
-    assertThatThrownBy(() -> new GatewayProperties(secret, CAP))
+    assertThatThrownBy(() -> new GatewayProperties(secret, CAP, false))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("webhook-secret");
   }
@@ -31,23 +31,35 @@ class GatewayPropertiesTest {
   void bodyCapOutsideTheSupportedRangeFailsStartup(String size) {
     DataSize bad = DataSize.parse(size);
 
-    assertThatThrownBy(() -> new GatewayProperties("secret", bad))
+    assertThatThrownBy(() -> new GatewayProperties("secret", bad, false))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("max-body-size");
   }
 
   @Test
   void missingBodyCapFailsStartup() {
-    assertThatThrownBy(() -> new GatewayProperties("secret", null))
+    assertThatThrownBy(() -> new GatewayProperties("secret", null, false))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("max-body-size");
   }
 
   @Test
   void toStringNeverShowsTheSecret() {
-    GatewayProperties props = new GatewayProperties("s3cr3t-value", CAP);
+    GatewayProperties props = new GatewayProperties("s3cr3t-value", CAP, false);
 
     assertThat(props.toString()).doesNotContain("s3cr3t-value");
+  }
+
+  @Test
+  void draftsAreSkippedUnlessExplicitlyEnabled() {
+    GatewayProperties defaults = bind(Map.of("reviewbot.gateway.webhook-secret", "x"));
+    GatewayProperties enabled =
+        bind(
+            Map.of(
+                "reviewbot.gateway.webhook-secret", "x", "reviewbot.gateway.review-drafts", "true"));
+
+    assertThat(defaults.reviewDrafts()).isFalse();
+    assertThat(enabled.reviewDrafts()).isTrue();
   }
 
   @Test

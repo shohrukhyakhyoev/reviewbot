@@ -1,0 +1,13 @@
+{
+  "action": "opened",
+  "number": 17,
+  "pull_request": {
+    "number": 17,
+    "draft": false,
+    "updated_at": "2026-07-05T10:00:00Z",
+    "head": { "label": "acme:feature/retry-budget", "ref": "feature/retry-budget" },
+    "base": { "ref": "main", "sha": "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d" }
+  },
+  "repository": { "full_name": "acme/app" },
+  "installation": { "id": 12345 }
+}

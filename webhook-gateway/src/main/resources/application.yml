@@ -8,3 +8,4 @@ server:
 reviewbot:
   gateway:
     webhook-secret: ${GITHUB_WEBHOOK_SECRET:}
+    review-drafts: ${REVIEWBOT_REVIEW_DRAFTS:false}

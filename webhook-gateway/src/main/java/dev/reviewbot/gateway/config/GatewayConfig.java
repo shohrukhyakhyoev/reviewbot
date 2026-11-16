@@ -8,6 +8,7 @@ import org.springframework.core.Ordered;
 
 import dev.reviewbot.gateway.webhook.HmacVerificationFilter;
 import dev.reviewbot.gateway.webhook.SignatureVerifier;
+import dev.reviewbot.gateway.webhook.WebhookIntake;
 
 @Configuration
 @EnableConfigurationProperties(GatewayProperties.class)
@@ -19,6 +20,11 @@ public class GatewayConfig {
   @Bean
   SignatureVerifier signatureVerifier(GatewayProperties properties) {
     return new SignatureVerifier(properties.webhookSecret());
+  }
+
+  @Bean
+  WebhookIntake webhookIntake(GatewayProperties properties) {
+    return new WebhookIntake(properties.reviewDrafts());
   }
 
   // The filter is deliberately not a bean: a Filter bean would also be registered for every URL.

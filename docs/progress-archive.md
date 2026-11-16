@@ -5,6 +5,14 @@ Verbatim, never edited. Not auto-read by any session; open it when you need hist
 
 ---
 
+### [E1-2] Failure classification + outcome types — 2026-11-14
+- Built: failure vocabulary in `shared/.../failure/`: `FailureClass` (every §10.1 string; `EXHAUSTED_{class}` derived and parsed), `FailureKind` (kind → route, counters), `Outcome` (sealed: Success/Skip/Defer/Transient/Terminal/BreakerParked; each rejects a class of the wrong kind), typed exceptions (`TerminalReviewException` is E8's `ignoreExceptions`), `ProviderError` + `ProviderErrorClassifier` (status/headers → class; ambiguous 403; Retry-After seconds/HTTP-date and reset epoch → `not_before`), `FailureClassifier` (any Throwable → one Outcome).
+- Decisions: names the spec lacks, now fixed: transient `GITHUB_UNAVAILABLE` / `ANTHROPIC_UNAVAILABLE` / `AMBIGUOUS_POST` / `UNEXPECTED`, terminal `UNCLASSIFIED` (a 4xx no row covers). Outage or open provider breaker = `DependencyUnavailableException(Dependency)` → `BreakerParked`; bad envelope or header → `POISON_DESERIALIZATION`; `classify` looks through wrapper exceptions. `not_before` is dropped if unparseable, past, or more than 1 day out. `Defer`/`Transient`/`Terminal` carry the exception so the DLQ envelope keeps status, body snippet and cause. Claude wrote all code at the human's request (shallow ticket, time-boxed).
+- Files/modules: 12 main + 4 test files in `shared/.../failure/`.
+- Tests: one table-driven case per §10.1 row; 403 both ways; Retry-After and reset parsing; wrapped and cyclic causes; body capped and kept out of `toString`. `verify.py` green: 258 tests. Five `/review-mine` rounds (R1–R17; R16 and R17 skipped by the human).
+- Hours: est 3.5 / actual 1.5
+- Learning: [x] concept:n/a · [x] tech:n/a · [x] adr:n/a · teach-back: pass (3/3; Q1 needed a follow-up, Q2 had a correction)
+
 ### [E1-1] PR key + Redis key builders — 2026-11-13
 - Built: `PrKey` record (installation id, repo `owner/name`, PR number) with `render()` and `parse()`; `RedisKeys` builders for `delivery`, `ghcfg`, `dedup` (SHA + round), `lock` (no SHA) and the four TTL `Duration` constants (24 h / 7 d / 30 s / 5 min).
 - Decisions: every `PrKey` is valid by construction (checks in the compact constructor); `parse` accepts only the canonical form (`render()` of the result must equal the input), so one PR has one key string and one Kafka partition. Ids and PR numbers must be >= 1; repo must match `owner/name` over GitHub's charset. `ghcfg` reuses `PrKey`'s package-private validity helpers. No `skip:` builder (§19.14). `LOCK_TTL` is the Redisson watchdog timeout, never a `leaseTime`.
