@@ -34,7 +34,7 @@ State and Actual h through `/ticket` (→ `wip`) and `/close` (→ `done`).
 | E1-5 | Config models + constants | M | Delegate | — | done | core | 1.5 | 1.5 | E2-0, E1-4 |
 | E3-0 | HMAC verification filter | S | Pair | — | done | core | 2 | 2 | E2-0 |
 | E3-1 | Event filter + envelope build | M | Pair | — | done | core | 3.5 | 2 | E3-0, E1-0 |
-| E3-2 | Delivery dedup component | S | Pair | — | todo | core | 2 | — | E1-1 |
+| E3-2 | Delivery dedup component | S | Pair | — | done | core | 2 | 3 | E1-1 |
 | E3-3 | Producer + endpoint orchestration | M | Own | all | todo | core | 7 | — | E3-1, E3-2, E1-5 |
 | E4-0 | OffsetTracker | M | Own | all | todo | core | 7 | — | E2-0 |
 | E4-1 | Coalescer (pipeline step 0) | S | Own | all | todo | core | 4 | — | E1-0, E1-2 |
