@@ -16,7 +16,7 @@ entry in `docs/learning/ticket-notes.md`.
 | Exhaustive switch over a closed set (Java 21) | — | E1-0, E1-2 | 2 | yes: propose a registry entry |
 | Types that tell the truth (nullability) | — | E1-0 | 1 | — |
 | Actionable failure messages | — | E1-0, E1-1, E1-2 | 3 | yes: propose a registry entry |
-| Comments match the code | — | E1-0, E1-1, E1-2, E3-1 | 4 | yes: propose a registry entry |
+| Comments match the code | — | E1-0, E1-1, E1-2, E3-1, E3-2 | 5 | yes: propose a registry entry |
 | Fail fast on malformed input | — | E1-0, E1-1, E1-4 | 3 | yes: propose a registry entry |
 | Canonical form (parse inverts render exactly) | — | E1-1 | 1 | — |
 | DRY (one place for the key format) | — | E1-1 | 1 | — |
@@ -37,7 +37,7 @@ entry in `docs/learning/ticket-notes.md`.
 | One behaviour per test, in the test class named for it | — | E1-4 | 1 | — |
 | Bound untrusted input at the trust boundary | — | E3-0 | 1 | — |
 | Encapsulation (least visibility) | — | E3-0 | 1 | — |
-| A test must fail when the property breaks | — | E3-0 | 1 | — |
+| A test must fail when the property breaks | — | E3-0, E3-2 | 2 | yes: propose a registry entry |
 | ISP (depend only on what you use) and acyclic package dependencies | solid | E3-0 | 1 | — |
 | Consistency (one vocabulary per method) | — | E3-0 | 1 | — |
 | Design for extension or prohibit it | — | E3-0 | 1 | — |

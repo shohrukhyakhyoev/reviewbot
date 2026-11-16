@@ -16,12 +16,13 @@ import org.springframework.util.unit.DataSize;
 class GatewayPropertiesTest {
 
   private static final DataSize CAP = DataSize.ofMegabytes(25);
+  private static final String REDIS_URL = "redis://localhost:6379";
 
   @ParameterizedTest
   @NullAndEmptySource
   @ValueSource(strings = {" ", "\t\n"})
   void blankSecretFailsStartup(String secret) {
-    assertThatThrownBy(() -> new GatewayProperties(secret, CAP, false))
+    assertThatThrownBy(() -> new GatewayProperties(secret, CAP, false, REDIS_URL))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("webhook-secret");
   }
@@ -31,23 +32,46 @@ class GatewayPropertiesTest {
   void bodyCapOutsideTheSupportedRangeFailsStartup(String size) {
     DataSize bad = DataSize.parse(size);
 
-    assertThatThrownBy(() -> new GatewayProperties("secret", bad, false))
+    assertThatThrownBy(() -> new GatewayProperties("secret", bad, false, REDIS_URL))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("max-body-size");
   }
 
   @Test
   void missingBodyCapFailsStartup() {
-    assertThatThrownBy(() -> new GatewayProperties("secret", null, false))
+    assertThatThrownBy(() -> new GatewayProperties("secret", null, false, REDIS_URL))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("max-body-size");
   }
 
-  @Test
-  void toStringNeverShowsTheSecret() {
-    GatewayProperties props = new GatewayProperties("s3cr3t-value", CAP, false);
+  @ParameterizedTest
+  @NullAndEmptySource
+  @ValueSource(strings = {" ", "\t\n"})
+  void blankRedisUrlFailsStartup(String url) {
+    assertThatThrownBy(() -> new GatewayProperties("secret", CAP, false, url))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("redis-url");
+  }
 
-    assertThat(props.toString()).doesNotContain("s3cr3t-value");
+  @Test
+  void toStringNeverShowsTheSecretOrTheRedisUrl() {
+    GatewayProperties props =
+        new GatewayProperties("s3cr3t-value", CAP, false, "redis://:pa55word@host:6379");
+
+    assertThat(props.toString()).doesNotContain("s3cr3t-value").doesNotContain("pa55word");
+  }
+
+  @Test
+  void redisUrlDefaultsToLocalhostAndCanBeOverridden() {
+    GatewayProperties defaults = bind(Map.of("reviewbot.gateway.webhook-secret", "x"));
+    GatewayProperties overridden =
+        bind(
+            Map.of(
+                "reviewbot.gateway.webhook-secret", "x",
+                "reviewbot.gateway.redis-url", "redis://redis:6379"));
+
+    assertThat(defaults.redisUrl()).isEqualTo(REDIS_URL);
+    assertThat(overridden.redisUrl()).isEqualTo("redis://redis:6379");
   }
 
   @Test

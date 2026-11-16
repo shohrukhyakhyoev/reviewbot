@@ -11,12 +11,18 @@ import org.springframework.util.unit.DataSize;
  */
 @ConfigurationProperties("reviewbot.gateway")
 public record GatewayProperties(
-    String webhookSecret, @DefaultValue("25MB") DataSize maxBodySize, boolean reviewDrafts) {
+    String webhookSecret,
+    @DefaultValue("25MB") DataSize maxBodySize,
+    boolean reviewDrafts,
+    @DefaultValue("redis://localhost:6379") String redisUrl) {
 
   public GatewayProperties {
     if (webhookSecret == null || webhookSecret.isBlank()) {
       throw new IllegalArgumentException(
           "reviewbot.gateway.webhook-secret must be set (env GITHUB_WEBHOOK_SECRET)");
+    }
+    if (redisUrl == null || redisUrl.isBlank()) {
+      throw new IllegalArgumentException("reviewbot.gateway.redis-url must be set (env REDIS_URL)");
     }
     if (maxBodySize == null
         || maxBodySize.toBytes() < 1
@@ -30,6 +36,7 @@ public record GatewayProperties(
     return (int) maxBodySize.toBytes();
   }
 
+  // redisUrl is left out: it may carry a password (redis://:pw@host).
   @Override
   public String toString() {
     return "GatewayProperties[webhookSecret=***, maxBodySize="
