@@ -8,7 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 
 /** The context must load with no external services running. */
-@SpringBootTest
+@SpringBootTest(properties = "reviewbot.gateway.webhook-secret=test-secret")
 class WebhookGatewayApplicationTest {
 
   @Autowired private ApplicationContext context;

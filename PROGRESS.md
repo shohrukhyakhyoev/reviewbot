@@ -11,11 +11,11 @@ entries verbatim to the top of `docs/progress-archive.md`. The point is orientat
 
 ## Current state (update this line every session)
 
-- **Phase:** E1 — core contracts (E2 infra scaffold done).
-- **Last ticket completed:** E1-5 (Config models + constants).
-- **Next ticket:** E3-0 (HMAC verification filter, mode Pair). Execution order and modes: `tickets/status.md` (`python scripts/claude/ctx.py next`).
+- **Phase:** E3 — webhook gateway (E1 core contracts and E2 infra scaffold done).
+- **Last ticket completed:** E3-0 (HMAC verification filter).
+- **Next ticket:** E3-1 (Event filter + envelope build, mode Pair). Execution order and modes: `tickets/status.md` (`python scripts/claude/ctx.py next`).
 - **Claude Code setup:** done 2026-11-12 (`docs/claude-setup-plan.md`, branch `claude-setup`). Modes per amendment 1 (16 Own tickets: the human writes the invariant/ordering cores). **No fixed date**; order: core (E1–E5) → E6 → E8 → **first deploy**, simple-first (Docker + GitHub Actions + AWS, single host) → E7, E9, E10 → EKS/Terraform (E11). Jan–Feb: exams, no project time.
-- **Build status:** `./mvnw clean verify` green locally after E1-5: 5 reactor modules, 425 tests (coverage gates passed, 98.1% overall). E1-5's PR is the first CI run with Spring Boot and Jackson YAML in `shared`.
+- **Build status:** `./mvnw clean verify` green locally after E3-0: 5 reactor modules, 471 tests (coverage gates passed, 98.0% overall). E3-0 is the first ticket with Spring MVC code and MockMvc tests in `webhook-gateway`.
 
 ---
 
@@ -38,6 +38,14 @@ The `- Learning:` line is checked by the commit-msg hook on `E?-?: …` commits:
 - Hours: est X / actual Y (Y = sum of the worklog's session lines, confirmed by the human).
 - Learning: [x] concept:<slug> (<link>) · [x] tech:<slug> (<link>) · [x] adr:<NNNN or n/a> · teach-back: pass (k/N)
 -->
+
+### [E3-0] HMAC verification filter — 2026-11-16
+- Built: `webhook-gateway`: `HmacVerificationFilter` on `POST /webhook` (path and order pinned by a `FilterRegistrationBean`, ahead of every filter except character encoding), `CachedBodyHttpServletRequest` (reads the body once, replays the raw bytes, size cap), `SignatureVerifier` (HMAC-SHA256 over the raw bytes, `MessageDigest.isEqual`), `GatewayProperties` (`reviewbot.gateway.webhook-secret`, `max-body-size`).
+- Decisions: 25 MB body cap (default of `reviewbot.gateway.max-body-size`), checked before the signature, answers `413`: a scope extension, since the ticket allowed only 401 or pass-through; 25 MB is GitHub's payload cap (search results, pages not opened in full). The filter is not a bean (a `Filter` bean would also guard `/settings/**`). `SignatureVerifier` takes the secret as a `String`, so `webhook` does not depend on `config`. The human wrote the reject-or-pass branch in the filter; Claude wrote the rest, including `verify()` at the human's request.
+- Files/modules: 6 main + 5 test files in `webhook-gateway/.../{config,webhook}/`; `application.yml` (`webhook-secret: ${GITHUB_WEBHOOK_SECRET:}`); `WebhookGatewayApplicationTest` now supplies a secret.
+- Tests: GitHub's published vector; tampered, wrong-secret, missing, wrong-length and non-hex headers; multi-byte UTF-8 (UTF-8 vs Latin-1 bytes); a handler spy through MockMvc (401 and 413 never reach `@RequestBody`); `isEqual` asserted via `mockStatic`; ordering against every other filter (mutation-checked); cap at and over the limit, declared and chunked. `verify.py` green: 471 tests, 98.0% overall. Four `/review-mine` rounds (R1–R9; R9 skipped).
+- Hours: est 2 / actual 2
+- Learning: [x] concept:authn-vs-authz (https://app.notion.com/p/41a997ba8e7c813cbe03ea4d7094f8e1; `lite`) · [x] concept:webhook-vs-websocket-webjob (https://app.notion.com/p/41a997ba8e7c814c8087f55a39c5c8a3; `lite`) · [x] tech:spring-boot (https://app.notion.com/p/419997ba8e7c8192ad34d8780ade0afc; `lite`) · [x] adr:n/a · teach-back: pass (3/3; Q1 and Q2 needed a follow-up)
 
 ### [E1-5] Config models + constants — 2026-11-15
 - Built: `shared/.../config/`: `ReviewbotProperties` (`reviewbot.*`, every §12 default, bind-time checks), `Topics` (names + partition counts, §4.1), `ModelDefaults.DEFAULT_MODEL` (`claude-sonnet-4-6`), `RepoConfig` + `ReviewAuthors` + `RepoConfigParser` (lenient `.reviewbot.yml` parser, §7.1 step 7).
@@ -70,14 +78,6 @@ The `- Learning:` line is checked by the commit-msg hook on `E?-?: …` commits:
 - Tests: one table-driven case per §10.1 row; 403 both ways; Retry-After and reset parsing; wrapped and cyclic causes; body capped and kept out of `toString`. `verify.py` green: 258 tests. Five `/review-mine` rounds (R1–R17; R16 and R17 skipped by the human).
 - Hours: est 3.5 / actual 1.5
 - Learning: [x] concept:n/a · [x] tech:n/a · [x] adr:n/a · teach-back: pass (3/3; Q1 needed a follow-up, Q2 had a correction)
-
-### [E1-1] PR key + Redis key builders — 2026-11-13
-- Built: `PrKey` record (installation id, repo `owner/name`, PR number) with `render()` and `parse()`; `RedisKeys` builders for `delivery`, `ghcfg`, `dedup` (SHA + round), `lock` (no SHA) and the four TTL `Duration` constants (24 h / 7 d / 30 s / 5 min).
-- Decisions: every `PrKey` is valid by construction (checks in the compact constructor); `parse` accepts only the canonical form (`render()` of the result must equal the input), so one PR has one key string and one Kafka partition. Ids and PR numbers must be >= 1; repo must match `owner/name` over GitHub's charset. `ghcfg` reuses `PrKey`'s package-private validity helpers. No `skip:` builder (§19.14). `LOCK_TTL` is the Redisson watchdog timeout, never a `leaseTime`.
-- Files/modules: `shared/.../keys/{PrKey,RedisKeys}.java`; CLAUDE.md working rule 6 (sparse comments); comments trimmed in the E1-0 `shared` main files (behavior-neutral).
-- Tests: `PrKeyTest` (golden render, round trip for dots/hyphens/underscores, malformed and non-canonical matrices incl. Arabic-Indic digits, error messages name the key, constructor bounds) and `RedisKeysTest` (golden strings written from §5.2, round differs per key, lock has no SHA, input rejection, TTLs). `verify.py` green: 163 tests, `shared` 97.5%. Five `/review-mine` rounds (R1–R10, all fixed).
-- Hours: est 2 / actual 1
-- Learning: [x] concept:n/a · [x] tech:n/a · [x] adr:n/a · teach-back: pass (3/3; Q1 and Q2 needed a follow-up)
 
 ---
 
@@ -114,6 +114,9 @@ Decisions that affect more than the ticket that made them. Keep it tight.
 - **Consumer sizing is checked at bind (E1-5):** `Consumer` throws unless `1 <= maxPollRecords <= resumeThreshold <= inFlightCap` (CF-1/CF-2, I6), so a bad override fails startup.
 - **Repo config (E1-5):** `RepoConfigParser.parse(yaml, "owner/name")` never throws and never logs file content; any problem (incl. aliases, repeated keys) returns `RepoConfig.DEFAULTS` for the whole file. E9's loader calls it.
 - **`shared` dependencies (E1-5):** `shared` now depends on `spring-boot` (config binding), `jackson-dataformat-yaml` and `slf4j-api`; `spring-boot-configuration-processor` is in the parent's `annotationProcessorPaths`.
+- **Webhook filter (E3-0):** register `HmacVerificationFilter` only through `GatewayConfig`'s `FilterRegistrationBean` (`/webhook`, order `HIGHEST_PRECEDENCE + 10`), never as a `@Component`. Downstream code reads the body through the cached wrapper, so the hashed and parsed bytes are the same (§19.6).
+- **Body cap (E3-0):** `reviewbot.gateway.max-body-size` (25 MB default) is checked before the signature; over the cap answers `413`.
+- **Gateway config (E3-0):** `GatewayProperties` (`reviewbot.gateway.*`) holds the webhook secret (env `GITHUB_WEBHOOK_SECRET`; startup fails if blank; never logged). Only `GatewayConfig` sees the whole record and passes single fields down.
 
 ---
 
@@ -143,6 +146,7 @@ Things spotted mid-work that belong to a later tier/epic. Record, don't build.
 - **E1-5 follow-ups:** (1) Spec/ticket: the ticket cites "§7.7" for the `.reviewbot.yml` parse rule, but §7 has only 7.1 and 7.2; the rule is §7.1 step 7 (§14.3 says "specified inline"). (2) Unverified, not in spec: `limits.token-budgets` ships empty, so every model uses the 150 000 default (§12 says ⚠ VERIFY real windows; E5 fills it); the author-cache bound (10 000 entries) is our number; `min_severity` default `NIT` is our choice (§7.1 step 11 names none). (3) Redisson derives the lock renewal interval from the watchdog TTL (about a third, unverified here), so §12's "renew ~10 s" is not a property; only `RedisKeys.LOCK_TTL` is. (4) `Topics` has names and partition counts only; replication and retention stay in `provision-topics.sh`. `TopicsTest` reads `../infra/kafka/provision-topics.sh` relative to the module directory (surefire's working directory). (5) `ReviewbotProperties` is not registered in any app yet (E3/E4/E6 add `@EnableConfigurationProperties`). (6) `/code-review medium` ran once (Claude launched it): fixed a null `getLocation()`, a catch-all for hostile YAML, duplicate-key detection and positivity checks on every duration and count; a claimed dotted-map-key problem did not reproduce (`Map<String,Integer>` keeps dots) and is pinned by a test; the multi-document YAML case (only the first document is read) was left as is. The human's own `/code-review` then found a real bug, fixed with a failing test first: a YAML alias (`model: *m`) bound the anchor name, so aliases are now rejected. Also fixed: null model id in `guardThresholdTokens`, heartbeat at most a third of the session timeout, poll timeout below `max.poll.interval`, repo name in the parse warning, the `TopicsTest` path (uses surefire's `basedir`), and Javadocs trimmed to one line (rule 6). Not acted on: (a) `errorDelays` may be overridden to a size other than 4, and E6 must derive the attempt budget from `errorDelays.size() + 1`, not a literal 5 (E6 to decide); (b) the `spring-boot` dependency reaching every module (see the worklog's ADR candidate). (8) Spec gap for E9: which branch's `.reviewbot.yml` is read (default branch or the PR head) is not stated; it matters when a PR edits the file. (7) Human: notes `di-ioc` and `spring-boot` (the binder behaviours worth writing up: `@DefaultValue` on nested records, constructor validation failing as `BindException`, unbound collections).
 - **Concept note `sql-upsert-constraints` has two stale answers** (human, with E5-0): the ON CONFLICT answer and the "duplicate events are impossible" interview answer; also add the §7.1 step 1 Redis-down DB fallback to the index answer. Since 2026-11-13 the page carries a `Correction (Claude)` under each stale answer; the human should still re-answer them in their own words.
 - **Notes format (setup, 2026-11-13):** notes now have two parts: the human's sections in their own words, and `(Claude)` reference sections (Mechanism, What breaks, Contrast; tech: APIs, gotchas, How we test, Linked concepts), with a `Correction (Claude)` under a wrong human answer. `lite` means no section is left as a template prompt. Backfilled: `sql-upsert-constraints`, `arch-message-vs-event`, `kafka`, `postgresql`. Known cosmetic glitch: Notion auto-links bare `CLAUDE.md` and "file:line" on older pages; new pages use backticks.
+- **E3-0 follow-ups:** (1) Spec §6.1 step 4d and §11.1 assume GitHub redelivers failed webhooks, but GitHub Docs (search results, pages not opened in full) say it does not redeliver automatically (manual or scripted, 3-day window on GitHub.com, 10 s timeout). A `503` or a timeout can lose an event unless a redelivery sweep exists; E3-3 writes the 503 path and the backlog puts the sweep in E11's runbook. Verify against the full docs, then decide whether to amend the spec. (2) R9 skipped: `HandlerSpy` in `HmacVerificationFilterTest` claims `POST /webhook`, so E3-1's real controller will collide with it (ambiguous mapping); move the spy to another route then. (3) "Secret excluded from actuator output" holds only because the gateway has no actuator dependency; recheck when one arrives. (4) Nullability policy is undecided (none, NullAway with `@NullMarked`, or hand-annotated `@Nullable`): ADR candidate; IntelliJ warns on Spring overrides. (5) Human: `SignatureVerifier.verify` (encode-then-compare) was written by Claude at your request; re-explain it in your own words.
 
 ---
 
