@@ -32,7 +32,7 @@ State and Actual h through `/ticket` (→ `wip`) and `/close` (→ `done`).
 | E1-3 | DLQ envelope builder | S | Delegate | — | done | core | 1 | 1 | E1-0, E1-2 |
 | E1-4 | ReviewGenerator port + domain types | S | Pair | — | done | core | 2 | 1.5 | E2-0 |
 | E1-5 | Config models + constants | M | Delegate | — | done | core | 1.5 | 1.5 | E2-0, E1-4 |
-| E3-0 | HMAC verification filter | S | Pair | — | todo | core | 2 | — | E2-0 |
+| E3-0 | HMAC verification filter | S | Pair | — | done | core | 2 | 2 | E2-0 |
 | E3-1 | Event filter + envelope build | M | Pair | — | todo | core | 3.5 | — | E3-0, E1-0 |
 | E3-2 | Delivery dedup component | S | Pair | — | todo | core | 2 | — | E1-1 |
 | E3-3 | Producer + endpoint orchestration | M | Own | all | todo | core | 7 | — | E3-1, E3-2, E1-5 |

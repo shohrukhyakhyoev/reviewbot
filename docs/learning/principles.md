@@ -27,7 +27,7 @@ entry in `docs/learning/ticket-notes.md`.
 | Types that tell the truth (closed set, not strings) | — | E1-2 | 1 | — |
 | Optional never as a field or parameter | — | E1-2 | 1 | — |
 | §7.1 breaker open ⇒ BREAKER_PARKED with frozen counters (§11.2) | circuit-breaker | E1-2 | 1 | — |
-| Names that say intent | — | E1-2, E1-4 | 2 | yes: propose a registry entry |
+| Names that say intent | — | E1-2, E1-4, E3-0 | 3 | yes: propose a registry entry |
 | DRY | — | E1-2 | 1 | — |
 | §10.1 route by kind first (I5 catch-all classifies correctly) | circuit-breaker | E1-2 | 1 | — |
 | YAGNI | — | E1-2 | 1 | — |
@@ -35,3 +35,10 @@ entry in `docs/learning/ticket-notes.md`.
 | Comments for the non-obvious why (CLAUDE.md rule 6) | — | E1-4 | 1 | — |
 | Precise exception types (one contract per package) | — | E1-4 | 1 | — |
 | One behaviour per test, in the test class named for it | — | E1-4 | 1 | — |
+| Bound untrusted input at the trust boundary | — | E3-0 | 1 | — |
+| Encapsulation (least visibility) | — | E3-0 | 1 | — |
+| A test must fail when the property breaks | — | E3-0 | 1 | — |
+| ISP (depend only on what you use) and acyclic package dependencies | solid | E3-0 | 1 | — |
+| Consistency (one vocabulary per method) | — | E3-0 | 1 | — |
+| Design for extension or prohibit it | — | E3-0 | 1 | — |
+| Test isolation (fixtures must not collide with production wiring) | — | E3-0 | 1 | — |

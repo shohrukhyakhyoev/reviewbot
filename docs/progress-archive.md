@@ -5,6 +5,14 @@ Verbatim, never edited. Not auto-read by any session; open it when you need hist
 
 ---
 
+### [E1-1] PR key + Redis key builders — 2026-11-13
+- Built: `PrKey` record (installation id, repo `owner/name`, PR number) with `render()` and `parse()`; `RedisKeys` builders for `delivery`, `ghcfg`, `dedup` (SHA + round), `lock` (no SHA) and the four TTL `Duration` constants (24 h / 7 d / 30 s / 5 min).
+- Decisions: every `PrKey` is valid by construction (checks in the compact constructor); `parse` accepts only the canonical form (`render()` of the result must equal the input), so one PR has one key string and one Kafka partition. Ids and PR numbers must be >= 1; repo must match `owner/name` over GitHub's charset. `ghcfg` reuses `PrKey`'s package-private validity helpers. No `skip:` builder (§19.14). `LOCK_TTL` is the Redisson watchdog timeout, never a `leaseTime`.
+- Files/modules: `shared/.../keys/{PrKey,RedisKeys}.java`; CLAUDE.md working rule 6 (sparse comments); comments trimmed in the E1-0 `shared` main files (behavior-neutral).
+- Tests: `PrKeyTest` (golden render, round trip for dots/hyphens/underscores, malformed and non-canonical matrices incl. Arabic-Indic digits, error messages name the key, constructor bounds) and `RedisKeysTest` (golden strings written from §5.2, round differs per key, lock has no SHA, input rejection, TTLs). `verify.py` green: 163 tests, `shared` 97.5%. Five `/review-mine` rounds (R1–R10, all fixed).
+- Hours: est 2 / actual 1
+- Learning: [x] concept:n/a · [x] tech:n/a · [x] adr:n/a · teach-back: pass (3/3; Q1 and Q2 needed a follow-up)
+
 ### [E1-0] Event envelope, validation & header codecs — 2026-11-13
 - Built: `ReviewRequestedEnvelope` (§3.1 record) + `EventType`; `EnvelopeValidator` (all fields required except force/replay, schema_version == 1, head_sha per type via an exhaustive switch expression, collects every problem); `EnvelopeSerde` (bytes ↔ envelope, bind then validate); `EnvelopeValidationException`; `HeaderCodec` + `HeaderDecodeException` (all seven §3.2 headers as typed constants, encode + decode).
 - Decisions: reading is tolerant of unknown fields but strict on types: no scalar coercion (1.9, "17", 5 for a string), no enum ordinals, `occurred_at` only as an ISO string (`StrictInstantReader`). An invalid, missing or wrongly typed envelope → `EnvelopeValidationException` (E1-2: POISON_DESERIALIZATION). A bad header → `HeaderDecodeException`, deliberately a different type; E1-2 decides the routing (the DB is the source of truth for the counters). Headers are used only via `HeaderCodec.NOT_BEFORE.encode/decode` etc. (private constructor, name and format bound together); encoders reject negatives. `toBytes` does not validate (the consumer is the trust boundary).
