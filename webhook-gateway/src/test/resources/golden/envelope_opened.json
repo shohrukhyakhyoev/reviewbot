@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "event_id": "00000000-0000-0000-0000-000000000001",
+  "delivery_id": "72d3162e-cc78-11e3-81ab-4c9367dc0958",
+  "type": "REVIEW_REQUESTED",
+  "occurred_at": "2026-07-05T10:00:00Z",
+  "installation_id": 12345,
+  "repo_full_name": "acme/app",
+  "pr_number": 17,
+  "head_sha": "9f2c1b7e4d3a8c6b5e0f1a2d3c4b5a69788f0e1d",
+  "force": false,
+  "replay": false
+}

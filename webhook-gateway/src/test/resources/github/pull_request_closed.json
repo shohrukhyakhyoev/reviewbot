@@ -1,0 +1,31 @@
+{
+  "action": "closed",
+  "number": 17,
+  "pull_request": {
+    "url": "https://api.github.com/repos/acme/app/pulls/17",
+    "id": 1934726401,
+    "number": 17,
+    "state": "closed",
+    "draft": false,
+    "merged": true,
+    "title": "Add retry budget to the poller",
+    "user": { "login": "octocat", "id": 583231, "type": "User" },
+    "created_at": "2026-07-05T09:58:12Z",
+    "updated_at": "2026-07-06T16:40:02Z",
+    "closed_at": "2026-07-06T16:40:02Z",
+    "merged_at": "2026-07-06T16:40:02Z",
+    "head": {
+      "label": "acme:feature/retry-budget",
+      "ref": "feature/retry-budget",
+      "sha": "c4e8a1d07b925f36e1d0c8b7a6958473625140ff"
+    },
+    "base": {
+      "label": "acme:main",
+      "ref": "main",
+      "sha": "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d"
+    }
+  },
+  "repository": { "id": 301928374, "name": "app", "full_name": "acme/app", "private": true },
+  "installation": { "id": 12345 },
+  "sender": { "login": "octocat", "id": 583231, "type": "User" }
+}

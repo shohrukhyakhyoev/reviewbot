@@ -4,9 +4,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.util.unit.DataSize;
 
-/** Gateway-only settings; the webhook secret never appears in {@code toString} or logs. */
+/**
+ * Gateway-only settings; the webhook secret never appears in {@code toString} or logs. {@code
+ * reviewDrafts} is global (O4): the gateway cannot read {@code .reviewbot.yml}, so no per-repo
+ * opt-in exists here.
+ */
 @ConfigurationProperties("reviewbot.gateway")
-public record GatewayProperties(String webhookSecret, @DefaultValue("25MB") DataSize maxBodySize) {
+public record GatewayProperties(
+    String webhookSecret, @DefaultValue("25MB") DataSize maxBodySize, boolean reviewDrafts) {
 
   public GatewayProperties {
     if (webhookSecret == null || webhookSecret.isBlank()) {
@@ -27,6 +32,10 @@ public record GatewayProperties(String webhookSecret, @DefaultValue("25MB") Data
 
   @Override
   public String toString() {
-    return "GatewayProperties[webhookSecret=***, maxBodySize=" + maxBodySize + "]";
+    return "GatewayProperties[webhookSecret=***, maxBodySize="
+        + maxBodySize
+        + ", reviewDrafts="
+        + reviewDrafts
+        + "]";
   }
 }
