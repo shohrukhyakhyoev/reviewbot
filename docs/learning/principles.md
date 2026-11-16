@@ -16,7 +16,7 @@ entry in `docs/learning/ticket-notes.md`.
 | Exhaustive switch over a closed set (Java 21) | — | E1-0, E1-2 | 2 | yes: propose a registry entry |
 | Types that tell the truth (nullability) | — | E1-0 | 1 | — |
 | Actionable failure messages | — | E1-0, E1-1, E1-2 | 3 | yes: propose a registry entry |
-| Comments match the code | — | E1-0, E1-1, E1-2 | 3 | yes: propose a registry entry |
+| Comments match the code | — | E1-0, E1-1, E1-2, E3-1 | 4 | yes: propose a registry entry |
 | Fail fast on malformed input | — | E1-0, E1-1, E1-4 | 3 | yes: propose a registry entry |
 | Canonical form (parse inverts render exactly) | — | E1-1 | 1 | — |
 | DRY (one place for the key format) | — | E1-1 | 1 | — |
@@ -24,7 +24,7 @@ entry in `docs/learning/ticket-notes.md`.
 | Nothing lost on failure paths (§10.2 self-describing DLQ envelope) | — | E1-2 | 1 | — |
 | S-4 data hygiene (never log customer content) | — | E1-2 | 1 | — |
 | Spec is the closed vocabulary (§10.1 classes, §15 alerts by class) | observability | E1-2 | 1 | — |
-| Types that tell the truth (closed set, not strings) | — | E1-2 | 1 | — |
+| Types that tell the truth (closed set, not strings) | — | E1-2, E3-1 | 2 | yes: propose a registry entry |
 | Optional never as a field or parameter | — | E1-2 | 1 | — |
 | §7.1 breaker open ⇒ BREAKER_PARKED with frozen counters (§11.2) | circuit-breaker | E1-2 | 1 | — |
 | Names that say intent | — | E1-2, E1-4, E3-0 | 3 | yes: propose a registry entry |
@@ -47,3 +47,4 @@ entry in `docs/learning/ticket-notes.md`.
 | Consistency (one typing rule per reader) | — | E3-1 | 1 | — |
 | Explicit contracts (no hidden coupling between reader and validator) | — | E3-1 | 1 | — |
 | Comments match the code (no unverified claims) | — | E3-1 | 1 | — |
+| SRP (counting vs diagnostic logging in one port) | solid | E3-1 | 1 | — |

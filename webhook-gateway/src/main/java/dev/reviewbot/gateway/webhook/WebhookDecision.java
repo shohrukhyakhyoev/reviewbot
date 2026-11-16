@@ -1,6 +1,9 @@
 package dev.reviewbot.gateway.webhook;
 
-/** What the gateway does with one verified delivery. Every variant is answered {@code 200}. */
+/**
+ * What the gateway does with one verified delivery. Only {@code Accept} goes on to dedup and
+ * produce; the others are answered {@code 200}.
+ */
 sealed interface WebhookDecision {
 
   /** Becomes an envelope and goes on to dedup and produce. */
