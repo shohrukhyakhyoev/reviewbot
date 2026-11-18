@@ -26,6 +26,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import dev.reviewbot.gateway.config.GatewayConfig;
 import dev.reviewbot.gateway.config.GatewayProperties;
+import dev.reviewbot.gateway.dedup.DeliveryDedup.CheckResult;
 import dev.reviewbot.shared.config.ReviewbotProperties;
 import dev.reviewbot.shared.keys.RedisKeys;
 
@@ -49,7 +50,7 @@ class DeliveryDedupTest {
   void anUnknownDeliveryIsAMiss() {
     DeliveryDedup dedup = dedupOn(REDIS);
 
-    assertThat(dedup.check("unknown-delivery")).isFalse();
+    assertThat(dedup.check("unknown-delivery")).isEqualTo(CheckResult.MISS);
     assertThat(metrics.hits).isZero();
     assertThat(metrics.checkFailedOpen).isZero();
   }
@@ -58,13 +59,13 @@ class DeliveryDedupTest {
   void aMarkedDeliveryIsAHit() {
     DeliveryDedup dedup = dedupOn(REDIS);
 
-    assertThat(dedup.check("marked-delivery")).isFalse();
+    assertThat(dedup.check("marked-delivery")).isEqualTo(CheckResult.MISS);
     assertThat(metrics.hits).isZero();
     assertThat(metrics.checkFailedOpen).isZero();
 
     dedup.markEnqueued("marked-delivery");
 
-    assertThat(dedup.check("marked-delivery")).isTrue();
+    assertThat(dedup.check("marked-delivery")).isEqualTo(CheckResult.HIT);
     assertThat(metrics.hits).isEqualTo(1);
   }
 
@@ -98,7 +99,7 @@ class DeliveryDedupTest {
   void checkFailsOpenWhenNothingListens() throws IOException {
     DeliveryDedup dedup = new DeliveryDedup(clientFor(urlOfClosedPort()), metrics);
 
-    assertThat(dedup.check("any-delivery")).isFalse();
+    assertThat(dedup.check("any-delivery")).isEqualTo(CheckResult.FAILED_OPEN);
 
     assertThat(metrics.checkFailedOpen).isEqualTo(1);
     assertThat(metrics.hits).isZero();
@@ -110,7 +111,7 @@ class DeliveryDedupTest {
     try (GenericContainer<?> redis = startPausedRedis()) {
       DeliveryDedup dedup = dedupOn(redis);
 
-      Duration elapsed = timed(() -> assertThat(dedup.check("any-delivery")).isFalse());
+      Duration elapsed = timed(() -> assertThat(dedup.check("any-delivery")).isEqualTo(CheckResult.FAILED_OPEN));
 
       assertThat(elapsed).isLessThan(BUDGET);
       assertThat(metrics.checkFailedOpen).isEqualTo(1);
@@ -173,7 +174,8 @@ class DeliveryDedupTest {
   /** The client comes from production wiring, so the 2 s budget under test is the real one. */
   private RedissonClient clientFor(String redisUrl) {
     GatewayProperties gateway =
-        new GatewayProperties("secret", DataSize.ofMegabytes(25), false, redisUrl);
+        new GatewayProperties(
+            "secret", DataSize.ofMegabytes(25), false, redisUrl, "localhost:9092");
     ReviewbotProperties reviewbot =
         new Binder(new MapConfigurationPropertySource(Map.of()))
             .bindOrCreate("reviewbot", ReviewbotProperties.class);

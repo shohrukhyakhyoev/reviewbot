@@ -2,6 +2,9 @@ package dev.reviewbot.gateway.webhook;
 
 import static dev.reviewbot.gateway.webhook.TestSignatures.sign;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -11,15 +14,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import jakarta.servlet.Filter;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.boot.web.servlet.filter.OrderedFormContentFilter;
 import org.springframework.boot.web.servlet.filter.OrderedHiddenHttpMethodFilter;
@@ -30,7 +34,6 @@ import org.springframework.core.annotation.OrderUtils;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @SpringBootTest(
@@ -45,23 +48,20 @@ class HmacVerificationFilterTest {
   static final String SECRET = "It's a Secret to Everybody";
   private static final int CAP = 1024;
 
-  /** Stands in for E3-1: counts how often a request got past the filter and what it read. */
+  /** A path outside the filter's pattern, to show it is not gated. */
   @RestController
   static class HandlerSpy {
     final AtomicInteger calls = new AtomicInteger();
-    final AtomicReference<byte[]> lastBody = new AtomicReference<>();
-
-    @PostMapping("/webhook")
-    void webhook(@RequestBody byte[] body) {
-      calls.incrementAndGet();
-      lastBody.set(body);
-    }
 
     @PostMapping("/settings/ping")
     void settings() {
       calls.incrementAndGet();
     }
   }
+
+  // The real controller's first collaborator: what it receives is what got past the filter.
+  // Unstubbed, it returns Optional.empty(), so the controller answers 200 without producing.
+  @MockBean private WebhookIntake intake;
 
   @Autowired private MockMvc mvc;
   @Autowired private HandlerSpy spy;
@@ -70,7 +70,6 @@ class HmacVerificationFilterTest {
   @BeforeEach
   void resetSpy() {
     spy.calls.set(0);
-    spy.lastBody.set(null);
   }
 
   // Multi-byte on purpose: the handler must read the very bytes that were signed.
@@ -85,8 +84,7 @@ class HmacVerificationFilterTest {
                 .content(body))
         .andExpect(status().isOk());
 
-    assertThat(spy.calls).hasValue(1);
-    assertThat(spy.lastBody.get()).isEqualTo(body);
+    assertThat(handledBody()).isEqualTo(body);
   }
 
   @Test
@@ -101,7 +99,7 @@ class HmacVerificationFilterTest {
                 .content(sent))
         .andExpect(status().isUnauthorized());
 
-    assertThat(spy.calls).hasValue(0);
+    verify(intake, never()).handle(any(), any(), any());
   }
 
   @Test
@@ -113,7 +111,7 @@ class HmacVerificationFilterTest {
                 .content("{}"))
         .andExpect(status().isUnauthorized());
 
-    assertThat(spy.calls).hasValue(0);
+    verify(intake, never()).handle(any(), any(), any());
   }
 
   @Test
@@ -121,7 +119,7 @@ class HmacVerificationFilterTest {
     mvc.perform(post("/webhook").contentType(MediaType.APPLICATION_JSON).content("{}"))
         .andExpect(status().isUnauthorized());
 
-    assertThat(spy.calls).hasValue(0);
+    verify(intake, never()).handle(any(), any(), any());
   }
 
   @Test
@@ -133,7 +131,7 @@ class HmacVerificationFilterTest {
                 .content("{}"))
         .andExpect(status().isUnauthorized());
 
-    assertThat(spy.calls).hasValue(0);
+    verify(intake, never()).handle(any(), any(), any());
   }
 
   // A correct signature does not help: the size check comes first, so nothing oversized is buffered.
@@ -148,7 +146,7 @@ class HmacVerificationFilterTest {
                 .content(tooBig))
         .andExpect(status().isPayloadTooLarge());
 
-    assertThat(spy.calls).hasValue(0);
+    verify(intake, never()).handle(any(), any(), any());
   }
 
   @Test
@@ -162,8 +160,7 @@ class HmacVerificationFilterTest {
                 .content(atCap))
         .andExpect(status().isOk());
 
-    assertThat(spy.calls).hasValue(1);
-    assertThat(spy.lastBody.get()).hasSize(CAP);
+    assertThat(handledBody()).hasSize(CAP);
   }
 
   @Test
@@ -188,7 +185,9 @@ class HmacVerificationFilterTest {
     assertThat(context.getBeansOfType(HmacVerificationFilter.class)).isEmpty();
   }
 
-  // Everything Spring registers must run after us, except the encoding filter at HIGHEST_PRECEDENCE.
+  // Everything Spring registers must run after us, so nothing reads the body before it is verified.
+  // Exempt: the encoding filter at HIGHEST_PRECEDENCE, and our timing filter, which reads no body
+  // and must wrap us so 401/413 are counted (pinned in timingFilterWrapsUsSoRejectionsAreCounted).
   @Test
   @SuppressWarnings("unchecked")
   void runsAheadOfEveryOtherFilterExceptCharacterEncoding() {
@@ -207,12 +206,24 @@ class HmacVerificationFilterTest {
                     .isTrue());
   }
 
+  @Test
+  @SuppressWarnings("unchecked")
+  void timingFilterWrapsUsSoRejectionsAreCounted() {
+    FilterRegistrationBean<?> timing =
+        context.getBean("webhookTimingFilter", FilterRegistrationBean.class);
+    int ours = context.getBean("hmacVerificationFilter", FilterRegistrationBean.class).getOrder();
+
+    assertThat(timing.getUrlPatterns()).containsExactly("/webhook");
+    assertThat(timing.getOrder()).isGreaterThan(Ordered.HIGHEST_PRECEDENCE).isLessThan(ours);
+  }
+
   @SuppressWarnings("rawtypes")
   private List<Integer> otherFilterOrders() {
     List<Integer> orders = new ArrayList<>();
     for (Map.Entry<String, FilterRegistrationBean> e :
         context.getBeansOfType(FilterRegistrationBean.class).entrySet()) {
-      if (!e.getKey().equals("hmacVerificationFilter")) {
+      if (!e.getKey().equals("hmacVerificationFilter")
+          && !e.getKey().equals("webhookTimingFilter")) {
         orders.add(e.getValue().getOrder());
       }
     }
@@ -223,5 +234,11 @@ class HmacVerificationFilterTest {
               : OrderUtils.getOrder(filter.getClass(), Ordered.LOWEST_PRECEDENCE));
     }
     return orders;
+  }
+
+  private byte[] handledBody() {
+    ArgumentCaptor<byte[]> body = ArgumentCaptor.forClass(byte[].class);
+    verify(intake).handle(any(), any(), body.capture());
+    return body.getValue();
   }
 }

@@ -14,7 +14,8 @@ public record GatewayProperties(
     String webhookSecret,
     @DefaultValue("25MB") DataSize maxBodySize,
     boolean reviewDrafts,
-    @DefaultValue("redis://localhost:6379") String redisUrl) {
+    @DefaultValue("redis://localhost:6379") String redisUrl,
+    @DefaultValue("localhost:9092") String kafkaBootstrapServers) {
 
   public GatewayProperties {
     if (webhookSecret == null || webhookSecret.isBlank()) {
@@ -23,6 +24,10 @@ public record GatewayProperties(
     }
     if (redisUrl == null || redisUrl.isBlank()) {
       throw new IllegalArgumentException("reviewbot.gateway.redis-url must be set (env REDIS_URL)");
+    }
+    if (kafkaBootstrapServers == null || kafkaBootstrapServers.isBlank()) {
+      throw new IllegalArgumentException(
+          "reviewbot.gateway.kafka-bootstrap-servers must be set (env KAFKA_BOOTSTRAP_SERVERS)");
     }
     if (maxBodySize == null
         || maxBodySize.toBytes() < 1
@@ -43,6 +48,8 @@ public record GatewayProperties(
         + maxBodySize
         + ", reviewDrafts="
         + reviewDrafts
+        + ", kafkaBootstrapServers="
+        + kafkaBootstrapServers
         + "]";
   }
 }

@@ -17,12 +17,13 @@ class GatewayPropertiesTest {
 
   private static final DataSize CAP = DataSize.ofMegabytes(25);
   private static final String REDIS_URL = "redis://localhost:6379";
+  private static final String KAFKA = "localhost:9092";
 
   @ParameterizedTest
   @NullAndEmptySource
   @ValueSource(strings = {" ", "\t\n"})
   void blankSecretFailsStartup(String secret) {
-    assertThatThrownBy(() -> new GatewayProperties(secret, CAP, false, REDIS_URL))
+    assertThatThrownBy(() -> new GatewayProperties(secret, CAP, false, REDIS_URL, KAFKA))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("webhook-secret");
   }
@@ -32,14 +33,14 @@ class GatewayPropertiesTest {
   void bodyCapOutsideTheSupportedRangeFailsStartup(String size) {
     DataSize bad = DataSize.parse(size);
 
-    assertThatThrownBy(() -> new GatewayProperties("secret", bad, false, REDIS_URL))
+    assertThatThrownBy(() -> new GatewayProperties("secret", bad, false, REDIS_URL, KAFKA))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("max-body-size");
   }
 
   @Test
   void missingBodyCapFailsStartup() {
-    assertThatThrownBy(() -> new GatewayProperties("secret", null, false, REDIS_URL))
+    assertThatThrownBy(() -> new GatewayProperties("secret", null, false, REDIS_URL, KAFKA))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("max-body-size");
   }
@@ -48,15 +49,38 @@ class GatewayPropertiesTest {
   @NullAndEmptySource
   @ValueSource(strings = {" ", "\t\n"})
   void blankRedisUrlFailsStartup(String url) {
-    assertThatThrownBy(() -> new GatewayProperties("secret", CAP, false, url))
+    assertThatThrownBy(() -> new GatewayProperties("secret", CAP, false, url, KAFKA))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("redis-url");
+  }
+
+  @ParameterizedTest
+  @NullAndEmptySource
+  @ValueSource(strings = {" ", "\t\n"})
+  void blankKafkaBootstrapServersFailStartup(String servers) {
+    assertThatThrownBy(() -> new GatewayProperties("secret", CAP, false, REDIS_URL, servers))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("kafka-bootstrap-servers");
+  }
+
+  @Test
+  void kafkaBootstrapServersDefaultToTheComposeHostListenerAndCanBeOverridden() {
+    GatewayProperties defaults = bind(Map.of("reviewbot.gateway.webhook-secret", "x"));
+    GatewayProperties overridden =
+        bind(
+            Map.of(
+                "reviewbot.gateway.webhook-secret", "x",
+                "reviewbot.gateway.kafka-bootstrap-servers", "kafka:19092"));
+
+    assertThat(defaults.kafkaBootstrapServers()).isEqualTo(KAFKA);
+    assertThat(overridden.kafkaBootstrapServers()).isEqualTo("kafka:19092");
   }
 
   @Test
   void toStringNeverShowsTheSecretOrTheRedisUrl() {
     GatewayProperties props =
-        new GatewayProperties("s3cr3t-value", CAP, false, "redis://:pa55word@host:6379");
+        new GatewayProperties(
+            "s3cr3t-value", CAP, false, "redis://:pa55word@host:6379", KAFKA);
 
     assertThat(props.toString()).doesNotContain("s3cr3t-value").doesNotContain("pa55word");
   }

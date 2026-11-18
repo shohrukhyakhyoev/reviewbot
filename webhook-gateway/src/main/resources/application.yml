@@ -10,3 +10,4 @@ reviewbot:
     webhook-secret: ${GITHUB_WEBHOOK_SECRET:}
     review-drafts: ${REVIEWBOT_REVIEW_DRAFTS:false}
     redis-url: ${REDIS_URL:redis://localhost:6379}
+    kafka-bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
