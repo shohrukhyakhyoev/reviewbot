@@ -27,12 +27,12 @@ entry in `docs/learning/ticket-notes.md`.
 | Types that tell the truth (closed set, not strings) | — | E1-2, E3-1 | 2 | yes: propose a registry entry |
 | Optional never as a field or parameter | — | E1-2 | 1 | — |
 | §7.1 breaker open ⇒ BREAKER_PARKED with frozen counters (§11.2) | circuit-breaker | E1-2 | 1 | — |
-| Names that say intent | — | E1-2, E1-4, E3-0 | 3 | yes: propose a registry entry |
+| Names that say intent | — | E1-2, E1-4, E3-0, E3-3 | 4 | yes: propose a registry entry |
 | DRY | — | E1-2 | 1 | — |
 | §10.1 route by kind first (I5 catch-all classifies correctly) | circuit-breaker | E1-2 | 1 | — |
 | YAGNI | — | E1-2 | 1 | — |
 | Acceptance criteria met as written | — | E1-4 | 1 | — |
-| Comments for the non-obvious why (CLAUDE.md rule 6) | — | E1-4 | 1 | — |
+| Comments for the non-obvious why (CLAUDE.md rule 6) | — | E1-4, E3-3 | 2 | yes: propose a registry entry |
 | Precise exception types (one contract per package) | — | E1-4 | 1 | — |
 | One behaviour per test, in the test class named for it | — | E1-4 | 1 | — |
 | Bound untrusted input at the trust boundary | — | E3-0 | 1 | — |
@@ -48,3 +48,7 @@ entry in `docs/learning/ticket-notes.md`.
 | Explicit contracts (no hidden coupling between reader and validator) | — | E3-1 | 1 | — |
 | Comments match the code (no unverified claims) | — | E3-1 | 1 | — |
 | SRP (counting vs diagnostic logging in one port) | solid | E3-1 | 1 | — |
+| §6.1 4d every produce failure is a 503 (closed outcome set) | rest-principles | E3-3 | 1 | — |
+| Nothing lost on failure paths | observability | E3-3 | 1 | — |
+| Injectable clock (no hidden time source) | — | E3-3 | 1 | — |
+| Fail fast on malformed input (one definition of valid at the trust boundary) | — | E3-3 | 1 | — |

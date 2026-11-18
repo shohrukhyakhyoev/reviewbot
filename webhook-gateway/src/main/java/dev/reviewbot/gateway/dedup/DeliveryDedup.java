@@ -13,6 +13,13 @@ import dev.reviewbot.shared.keys.RedisKeys;
  */
 public final class DeliveryDedup {
 
+  /** {@code FAILED_OPEN}: Redis did not answer, so treat it as a miss and produce anyway (§6.1 4a). */
+  public enum CheckResult {
+    HIT,
+    MISS,
+    FAILED_OPEN
+  }
+
   private static final String FLAG = "1";
 
   private final RedissonClient redisson;
@@ -27,22 +34,20 @@ public final class DeliveryDedup {
     this.metrics = metrics;
   }
 
-  /**
-   * True when this delivery was already enqueued; a Redis failure counts as "not enqueued". Throws
-   * {@code IllegalArgumentException} for a blank id or one containing ':'.
-   */
-  public boolean check(String deliveryId) {
+  /** Throws {@code IllegalArgumentException} for a blank id or one containing ':'. */
+  public CheckResult check(String deliveryId) {
     boolean exists;
     try {
       exists = flag(deliveryId).isExists();
     } catch (RedisException e) {
       metrics.checkFailedOpen(e);
-      return false;
+      return CheckResult.FAILED_OPEN;
     }
     if (exists) {
       metrics.hit();
+      return CheckResult.HIT;
     }
-    return exists;
+    return CheckResult.MISS;
   }
 
   /**

@@ -16,4 +16,4 @@ When an ADR is required: see `docs/learning/ticket-notes.md` (ADR column). `/clo
 
 | # | Title | Ticket | Status |
 |---|---|---|---|
-| — | (none yet) | | |
+| [0001](0001-one-deadline-for-gateway-produce.md) | Bound the gateway produce with one shared 5 s deadline | E3-3 | accepted |

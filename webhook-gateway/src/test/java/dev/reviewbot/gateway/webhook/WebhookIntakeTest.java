@@ -3,6 +3,7 @@ package dev.reviewbot.gateway.webhook;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -123,6 +124,16 @@ class WebhookIntakeTest {
     @Override
     public void malformed(String deliveryId, String field) {
       events.add("malformed:" + deliveryId + ":" + field);
+    }
+
+    @Override
+    public void answered(int status, Duration latency) {
+      events.add("answered:" + status);
+    }
+
+    @Override
+    public void produceFailed(Throwable cause) {
+      events.add("produceFailed:" + cause.getClass().getSimpleName());
     }
   }
 }
