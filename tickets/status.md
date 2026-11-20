@@ -36,7 +36,7 @@ State and Actual h through `/ticket` (→ `wip`) and `/close` (→ `done`).
 | E3-1 | Event filter + envelope build | M | Pair     | — | done | core | 3.5 | 2 | E3-0, E1-0 |
 | E3-2 | Delivery dedup component | S | Pair     | — | done | core | 2 | 3 | E1-1 |
 | E3-3 | Producer + endpoint orchestration | M | Pair     | all | done | core | 7 | 5 | E3-1, E3-2, E1-5 |
-| E4-0 | OffsetTracker | M | Own      | all | todo | core | 7 | — | E2-0 |
+| E4-0 | OffsetTracker | M | Pair     | all | done | core | 7 | 4 | E2-0 |
 | E4-1 | Coalescer (pipeline step 0) | S | Own      | all | todo | core | 4 | — | E1-0, E1-2 |
 | E4-2 | Dispatcher + drainer + retirement | L | Own      | all | todo | core | 10 | — | E4-0, E4-1, E1-1 |
 | E4-3 | Poller | M | Own      | all | todo | core | 7 | — | E4-0, E4-2, E1-5 |

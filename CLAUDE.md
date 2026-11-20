@@ -48,6 +48,13 @@ Build check with `python scripts/claude/verify.py` (summarized output, full log 
 notes, or the human chooses between ≥ 2 viable options the spec didn't dictate, end your reply with ONE line:
 `note-worthy: <what> → concept note <slug>` / `→ tech page <slug>` / `→ ADR candidate`. Don't stop the work,
 don't repeat a nudge in the same session, and add ADR candidates to the worklog's "Decisions pending".
+
+**ADR focus:** ADRs are the human's interview defense, so spend them on architecture and backend choices
+(messaging and delivery semantics, storage and consistency, concurrency model, failure handling, deployment).
+When such a choice comes up, flag it as an ADR candidate and make sure the ADR is written before `/close`.
+Test-tooling and code-style choices get one line in PROGRESS.md "Key decisions log" instead, unless the
+ticket's notes mapping requires an ADR. Choices the spec Appendix already made (e.g. Kafka over the
+alternatives) are defended in a concept note linking "Appendix #n", not in an ADR.
 **Notes have two parts, so the page is something to learn from later, not just proof of understanding.**
 *The human's sections* ("In my own words", "Mental model", the interview answers) are written in chat
 (`/notes write <slug>`): Claude interviews (one question at a time, questions and pointers, never the answer),
