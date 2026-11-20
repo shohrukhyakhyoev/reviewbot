@@ -55,18 +55,8 @@ When such a choice comes up, flag it as an ADR candidate and make sure the ADR i
 Test-tooling and code-style choices get one line in PROGRESS.md "Key decisions log" instead, unless the
 ticket's notes mapping requires an ADR. Choices the spec Appendix already made (e.g. Kafka over the
 alternatives) are defended in a concept note linking "Appendix #n", not in an ADR.
-**Notes have two parts, so the page is something to learn from later, not just proof of understanding.**
-*The human's sections* ("In my own words", "Mental model", the interview answers) are written in chat
-(`/notes write <slug>`): Claude interviews (one question at a time, questions and pointers, never the answer),
-the human answers in their own words, Claude fixes **only grammar, spelling, word choice and structure** and adds
-no ideas there. A wrong, vague or missing answer first gets a follow-up question. *Claude's sections* (concept
-note: Mechanism, What breaks, Contrast; tech page: APIs, gotchas, How we test, Linked concepts) are written by
-Claude after the interview, labelled `(Claude)`: factual, sourced from the spec, the code (real file:line) and
-official docs, concrete reviewbot examples, short; anything unverified is said to be unverified, never guessed.
-If the human's answer is still wrong or unknown after the follow-up, Claude adds a `Correction (Claude)` under it
-so the page ends up right. **A note is `lite` only when no section is left as a template prompt**; Claude sets the
-status (Notion first, inbox fallback). **ADRs stay human-written**; `/notes check <slug|ADR file>` reviews a note
-or ADR with questions only.
+**Notes** are written only through `/notes` (its skill holds the interview and section rules). **ADRs stay
+human-written**; `/notes check <slug|ADR file>` reviews a note or ADR with questions only.
 
 ## Tech stack (do not substitute)
 
@@ -156,24 +146,16 @@ Not inferable from the code. Violating any is a correctness bug even if tests pa
 ## Repo layout
 
 ```
-pom.xml                  parent POM — dependencyManagement, pluginManagement, Java 21
 shared/                  envelope, DLQ envelope, PrKey + Redis key builders, header codecs,
                          ReviewGenerator port, failure classifier, config models
 webhook-gateway/         HMAC verify, delivery dedup, produce, /settings/**
 review-worker/           parallel consumer engine + review pipeline + DLQ indexer + admin
 retry-worker/            delay-aware retry consumer (calls the same core)
-infra/                   docker-compose, Flyway migrations, k8s manifests, dashboards (plain dir)
-docs/spec.md             design specification v1.2 — source of truth for behavior
 docs/spec-map.md         topic → § → ticket index (navigation only; no spec content)
 docs/workflow.md         how the human runs a ticket (not instructions for you)
 docs/claude-setup-plan.md  Claude Code setup decisions (approved 2026-11-12)
 docs/adr/                implementation decision records — human-written
 docs/learning/           ticket → required notes mapping, note templates, Notion-offline inbox
-tickets/v1-backlog.md    54 V1 tickets in dependency order — load via /ticket, never whole
-tickets/status.md        ticket board: mode, state, hours — the single source of ticket state
-PROGRESS.md              build journal — current state injected at session start; /close updates it
-scripts/claude/          ctx.py (ticket/spec extractor), verify.py (build summary), selftest.py
-.claude/                 settings + hooks, skills, java-mentor agent, coach style, worklog/<ID>.md
 ```
 
 ## Local dev
