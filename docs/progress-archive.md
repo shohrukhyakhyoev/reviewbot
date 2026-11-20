@@ -5,6 +5,14 @@ Verbatim, never edited. Not auto-read by any session; open it when you need hist
 
 ---
 
+### [E1-5] Config models + constants — 2026-11-15
+- Built: `shared/.../config/`: `ReviewbotProperties` (`reviewbot.*`, every §12 default, bind-time checks), `Topics` (names + partition counts, §4.1), `ModelDefaults.DEFAULT_MODEL` (`claude-sonnet-4-6`), `RepoConfig` + `ReviewAuthors` + `RepoConfigParser` (lenient `.reviewbot.yml` parser, §7.1 step 7).
+- Decisions: Redis TTLs and the snippet cap stay in `RedisKeys` / `DlqException` (one definition, pinned by the golden test). The parser never throws and never logs file content; any problem gives all defaults for the whole file; aliases and duplicate keys count as problems. Our own choices, not in the spec: `min_severity` default `NIT`, case-insensitive enums, the 10 000-entry author-cache bound. `shared` now depends on `spring-boot`, `jackson-dataformat-yaml`, `slf4j-api`.
+- Files/modules: 6 main + 3 test files in `shared/.../config/`; parent `pom.xml` (configuration processor in `annotationProcessorPaths`), `shared/pom.xml`.
+- Tests: golden defaults vs §12 (mutation-checked), overrides and bind-time validation, `RepoConfig` parse matrix (incl. aliases, duplicate keys, hostile YAML), topics vs §4.1 and vs `provision-topics.sh`. `verify.py` green: 425 tests, 98.1% overall. Two `/code-review` rounds, one real bug fixed (an alias read as text).
+- Hours: est 1.5 / actual 1.5
+- Learning: [x] concept:di-ioc (https://app.notion.com/p/419997ba8e7c819a8c6eddf8df75e713; `lite`) · [x] tech:spring-boot (https://app.notion.com/p/419997ba8e7c8192ad34d8780ade0afc; `lite`) · [x] adr:n/a · teach-back: pass (1/1; the first question on the parser fallback failed, re-asked with a fresh question)
+
 ### [E1-4] ReviewGenerator port + domain types — 2026-11-14
 - Built: `shared/.../review/`: `ReviewGenerator` port (`Review generate(Diff, ReviewContext, ModelRef)`, §14.2), `Review` and `Finding {file, summary, severity, detail}`, `Severity` (NIT < MINOR < MAJOR < CRITICAL, `atOrAbove`), `Diff`/`DiffFile`, `ReviewContext(PrKey pr, baseSha?, headSha, round)`, `ModelRef`, package-private `Checks`; test fixture `StaticReviewGenerator`; `shared` now publishes a test-jar.
 - Decisions: `Severity` is declared least-severe-first (reverse of the spec's listing) so a higher ordinal means more severe; a comment and the 16-pair test guard a reorder. Every domain record rejects malformed input with `IllegalArgumentException` (null, blank text, null list elements; `Review` and `Diff` copy their lists immutably); `Finding` needs non-blank file, summary and detail. `DiffFile.patch` is non-null ("" allowed), `status` is plain text, `baseSha` null = first review. The port carries no API key (§19: decrypted in the adapter); key and factory design is E5-3's. The human wrote `Severity` and the `Finding` rules; Claude wrote the rest.

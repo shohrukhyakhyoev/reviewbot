@@ -17,7 +17,7 @@ entry in `docs/learning/ticket-notes.md`.
 | Types that tell the truth (nullability) | — | E1-0 | 1 | — |
 | Actionable failure messages | — | E1-0, E1-1, E1-2 | 3 | yes: propose a registry entry |
 | Comments match the code | — | E1-0, E1-1, E1-2, E3-1, E3-2 | 5 | yes: propose a registry entry |
-| Fail fast on malformed input | — | E1-0, E1-1, E1-4 | 3 | yes: propose a registry entry |
+| Fail fast on malformed input | — | E1-0, E1-1, E1-4, E4-0 | 4 | yes: propose a registry entry |
 | Canonical form (parse inverts render exactly) | — | E1-1 | 1 | — |
 | DRY (one place for the key format) | — | E1-1 | 1 | — |
 | I5 exactly one outcome (RetryDecision covers every failure) | — | E1-2 | 1 | — |
@@ -32,12 +32,12 @@ entry in `docs/learning/ticket-notes.md`.
 | §10.1 route by kind first (I5 catch-all classifies correctly) | circuit-breaker | E1-2 | 1 | — |
 | YAGNI | — | E1-2 | 1 | — |
 | Acceptance criteria met as written | — | E1-4 | 1 | — |
-| Comments for the non-obvious why (CLAUDE.md rule 6) | — | E1-4, E3-3 | 2 | yes: propose a registry entry |
+| Comments for the non-obvious why (CLAUDE.md rule 6) | — | E1-4, E3-3, E4-0 | 3 | yes: propose a registry entry |
 | Precise exception types (one contract per package) | — | E1-4 | 1 | — |
 | One behaviour per test, in the test class named for it | — | E1-4 | 1 | — |
 | Bound untrusted input at the trust boundary | — | E3-0 | 1 | — |
 | Encapsulation (least visibility) | — | E3-0 | 1 | — |
-| A test must fail when the property breaks | — | E3-0, E3-2 | 2 | yes: propose a registry entry |
+| A test must fail when the property breaks | — | E3-0, E3-2, E4-0 | 3 | yes: propose a registry entry |
 | ISP (depend only on what you use) and acyclic package dependencies | solid | E3-0 | 1 | — |
 | Consistency (one vocabulary per method) | — | E3-0 | 1 | — |
 | Design for extension or prohibit it | — | E3-0 | 1 | — |
@@ -52,3 +52,6 @@ entry in `docs/learning/ticket-notes.md`.
 | Nothing lost on failure paths | observability | E3-3 | 1 | — |
 | Injectable clock (no hidden time source) | — | E3-3 | 1 | — |
 | Fail fast on malformed input (one definition of valid at the trust boundary) | — | E3-3 | 1 | — |
+| I7 / O5 zombie completions are never committed and never contaminate a re-registration | kafka | E4-0 | 1 | — |
+| I3 contiguous watermark | — | E4-0 | 1 | — |
+| Spec wins (§8.4 O5 dirty tracking since last commit) | — | E4-0 | 1 | — |

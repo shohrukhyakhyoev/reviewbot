@@ -11,11 +11,11 @@ entries verbatim to the top of `docs/progress-archive.md`. The point is orientat
 
 ## Current state (update this line every session)
 
-- **Phase:** E3 — webhook gateway (E1 core contracts and E2 infra scaffold done).
-- **Last ticket completed:** E3-3 (Producer + endpoint orchestration).
-- **Next ticket:** E4-0 (OffsetTracker, mode Own). Execution order and modes: `tickets/status.md` (`python scripts/claude/ctx.py next`).
+- **Phase:** E4 — consumer parallelism engine (E1 core contracts, E2 infra scaffold and E3 webhook gateway done).
+- **Last ticket completed:** E4-0 (OffsetTracker).
+- **Next ticket:** E4-1 (Coalescer, pipeline step 0, mode Own). Execution order and modes: `tickets/status.md` (`python scripts/claude/ctx.py next`).
 - **Claude Code setup:** done 2026-11-12 (`docs/claude-setup-plan.md`, branch `claude-setup`). Modes per amendment 1 (16 Own tickets: the human writes the invariant/ordering cores). **No fixed date**; order: core (E1–E5) → E6 → E8 → **first deploy**, simple-first (Docker + GitHub Actions + AWS, single host) → E7, E9, E10 → EKS/Terraform (E11). Jan–Feb: exams, no project time.
-- **Build status:** `./mvnw clean verify` green locally after E3-3: 5 reactor modules, 610 tests (coverage gates passed, 98.3% overall; `webhook-gateway` 98.8%). Needs Docker running (Testcontainers in `shared` and `webhook-gateway`).
+- **Build status:** `./mvnw clean verify` green locally after E4-0: 5 reactor modules, 1 645 tests (coverage gates passed, 98.4% overall; `review-worker` 100%, engine branch gate active). Needs Docker running (Testcontainers in `shared` and `webhook-gateway`).
 
 ---
 
@@ -38,6 +38,14 @@ The `- Learning:` line is checked by the commit-msg hook on `E?-?: …` commits:
 - Hours: est X / actual Y (Y = sum of the worklog's session lines, confirmed by the human).
 - Learning: [x] concept:<slug> (<link>) · [x] tech:<slug> (<link>) · [x] adr:<NNNN or n/a> · teach-back: pass (k/N)
 -->
+
+### [E4-0] OffsetTracker — 2026-11-20
+- Built: `review-worker/.../engine/`: `OffsetTracker` (per-partition `PartitionState {generation, watermark, lastCommitted, islands}` behind its own monitor; `register` = fresh state at `position − 1`; `track(tp, offset)` stamps a record at dispatch; `markComplete(TrackedOffset)` advance/absorb/park with the permit released in `finally` (zombie, stale generation and exception paths included; a duplicate gets no second permit and throws); `committable()` / `committable(subset)` pure reads of watermarks advanced since the last confirmed commit; `markCommitted(map)`), `TrackedOffset` record.
+- Decisions: mode switched Own → Pair (the human). Generation fencing via `track`/`TrackedOffset` (review R1; shape chosen by the human) changes the §8.4 sketch signature `markComplete(tp, off)`, which I7 requires. Dirty mark cleared only by a confirmed commit (spec O5 wording, R3). [ADR 0002](docs/adr/0002-seeded-random-property-tests.md): seeded `Random`, not jqwik. The human wrote `register`, `unregister`, the advance/absorb/park core and `committable(subset)`; Claude wrote the rest, all tests and review fixes R1–R7 at the human's request.
+- Files/modules: `OffsetTracker.java`, `TrackedOffset.java`; tests `OffsetTrackerTest` (34), `OffsetTrackerPropertyTest` (2 × 500 seeds), `OffsetTrackerConcurrencyTest`; `kafka-clients` added to `review-worker/pom.xml`; `docs/adr/0002-seeded-random-property-tests.md`; `CLAUDE.md` gained an "ADR focus" rule.
+- Tests: unit (gap-park, absorption chain, register reset, zombie after unregister and after re-register, duplicates, dirty snapshot until confirmed, subset filtering, bad confirmation), property (I3/I4 every step; reassignment with late zombies, mutation-checked: removing the generation check fails all 500 seeds), stress (32 virtual threads × 40 000 completions with a polling thread). `verify.py` green: 1 645 tests, 98.4% overall, review-worker 100%, engine branch gate met. Three `/review-mine` rounds: R1 must-fix, R2–R4 should-fix, R5–R7 nits, all fixed.
+- Hours: est 7 / actual 4
+- Learning: [x] concept:concurrency-semaphore (https://app.notion.com/p/41e997ba8e7c8199ba79e1914628ee04; `lite`, new) · [x] concept:concurrency-monitors-locks (https://app.notion.com/p/41e997ba8e7c814c8574d4a5b64d5673; `lite`, new) · [x] adr:0002 · teach-back: pass (3/3; Q2 needed a follow-up)
 
 ### [E3-3] Producer + endpoint orchestration — 2026-11-18
 - Built: `webhook-gateway`: `kafka/ProducerSettings` (§4.2 values + `max.block.ms` = produce deadline), `kafka/ReviewRecordFactory` (topic, `PrKey` key, `EnvelopeSerde` value, `first_received_at` + `trace_id` via `HeaderCodec`), `webhook/WebhookEnqueuer` (C-1: check → produce within one 5 s deadline → mark only after a clean miss → ENQUEUED/DUPLICATE/UNAVAILABLE), `webhook/WebhookController` (`POST /webhook`: intake → enqueue → 200/503), `webhook/WebhookTimingFilter` (latency + status of every `/webhook` answer); producer bean with bounded close; setting `reviewbot.gateway.kafka-bootstrap-servers`.
@@ -70,14 +78,6 @@ The `- Learning:` line is checked by the commit-msg hook on `E?-?: …` commits:
 - Tests: GitHub's published vector; tampered, wrong-secret, missing, wrong-length and non-hex headers; multi-byte UTF-8 (UTF-8 vs Latin-1 bytes); a handler spy through MockMvc (401 and 413 never reach `@RequestBody`); `isEqual` asserted via `mockStatic`; ordering against every other filter (mutation-checked); cap at and over the limit, declared and chunked. `verify.py` green: 471 tests, 98.0% overall. Four `/review-mine` rounds (R1–R9; R9 skipped).
 - Hours: est 2 / actual 2
 - Learning: [x] concept:authn-vs-authz (https://app.notion.com/p/41a997ba8e7c813cbe03ea4d7094f8e1; `lite`) · [x] concept:webhook-vs-websocket-webjob (https://app.notion.com/p/41a997ba8e7c814c8087f55a39c5c8a3; `lite`) · [x] tech:spring-boot (https://app.notion.com/p/419997ba8e7c8192ad34d8780ade0afc; `lite`) · [x] adr:n/a · teach-back: pass (3/3; Q1 and Q2 needed a follow-up)
-
-### [E1-5] Config models + constants — 2026-11-15
-- Built: `shared/.../config/`: `ReviewbotProperties` (`reviewbot.*`, every §12 default, bind-time checks), `Topics` (names + partition counts, §4.1), `ModelDefaults.DEFAULT_MODEL` (`claude-sonnet-4-6`), `RepoConfig` + `ReviewAuthors` + `RepoConfigParser` (lenient `.reviewbot.yml` parser, §7.1 step 7).
-- Decisions: Redis TTLs and the snippet cap stay in `RedisKeys` / `DlqException` (one definition, pinned by the golden test). The parser never throws and never logs file content; any problem gives all defaults for the whole file; aliases and duplicate keys count as problems. Our own choices, not in the spec: `min_severity` default `NIT`, case-insensitive enums, the 10 000-entry author-cache bound. `shared` now depends on `spring-boot`, `jackson-dataformat-yaml`, `slf4j-api`.
-- Files/modules: 6 main + 3 test files in `shared/.../config/`; parent `pom.xml` (configuration processor in `annotationProcessorPaths`), `shared/pom.xml`.
-- Tests: golden defaults vs §12 (mutation-checked), overrides and bind-time validation, `RepoConfig` parse matrix (incl. aliases, duplicate keys, hostile YAML), topics vs §4.1 and vs `provision-topics.sh`. `verify.py` green: 425 tests, 98.1% overall. Two `/code-review` rounds, one real bug fixed (an alias read as text).
-- Hours: est 1.5 / actual 1.5
-- Learning: [x] concept:di-ioc (https://app.notion.com/p/419997ba8e7c819a8c6eddf8df75e713; `lite`) · [x] tech:spring-boot (https://app.notion.com/p/419997ba8e7c8192ad34d8780ade0afc; `lite`) · [x] adr:n/a · teach-back: pass (1/1; the first question on the parser fallback failed, re-asked with a fresh question)
 
 ---
 
@@ -130,6 +130,9 @@ Decisions that affect more than the ticket that made them. Keep it tight.
 - **Gateway produce deadline (E3-3, [ADR 0001](docs/adr/0001-one-deadline-for-gateway-produce.md)):** one deadline (`ReviewbotProperties.timeouts().gatewayProduce()`, 5 s) covers `send()` and the ack wait; `max.block.ms` is the same value and the deadline is taken **before** `send()`. E6's retry/DLQ producers follow the same rule. Producer config only via `ProducerSettings`, records only via `ReviewRecordFactory`.
 - **Produce failures are 503 (E3-3):** every produce failure, including what `send()` throws synchronously (closed producer, Kafka's `InterruptException`), is `UNAVAILABLE` → `503`, reported via `WebhookMetrics.produceFailed(cause)` by class name only. A record that cannot be built is a bug (500), not a 503, so building stays outside the try.
 - **Gateway timing filter (E3-3):** `WebhookTimingFilter` (order `HMAC − 5`, `/webhook` only) records status + latency of every answer, incl. 401/413; it reads no body, and `HmacVerificationFilterTest` exempts it **by name** from the "nothing before HMAC" rule. Time sources are injected (`Clock` bean, `LongSupplier` nanoTime) so tests use fixed or fake clocks.
+- **Tracker API (E4-0):** the poller calls `tracker.track(tp, offset)` per record at dispatch and carries the `TrackedOffset` to the drainer, which passes it to `markComplete` unchanged (generation fencing, I7). It commits `committable()` + 1 and calls `markCommitted(sameMap)` only in the `commitAsync` success callback and after `commitSync`.
+- **Tracker failures are bugs (E4-0):** `track` on an unregistered partition or at/below the watermark → `IllegalStateException`; a duplicate `markComplete` → no permit, `IllegalStateException` (E4-2's drainer must not retry it); `markCommitted` beyond the watermark → `IllegalArgumentException` (the `+1` mistake).
+- **ADR focus (E4-0, `CLAUDE.md`):** ADRs go to architecture/backend choices the human defends in interviews; test-tooling choices get a key-decision line instead ([ADR 0002](docs/adr/0002-seeded-random-property-tests.md) is the last of that kind).
 
 ---
 
@@ -144,6 +147,10 @@ Things spotted mid-work that belong to a later tier/epic. Record, don't build.
 - **`shared` now depends on `spring-boot` (E1-5, for `@ConfigurationProperties`; the ticket required it).** Still open for E5: whether `processReview(event, attemptContext)` (spec §2) lives in `shared`, and whether it may use `spring-context`; today only `spring-boot`, `jackson-dataformat-yaml` and `slf4j-api` are added.
 - **`infra/verify-stack.sh` needs mode 100755 in git** — Windows checkouts don't carry the exec bit; stage with `git add --chmod=+x infra/verify-stack.sh` (same as `coverage-gate.sh`).
 - ~~No Kafka healthcheck beyond "broker answers"~~ — resolved by E2-4 (`kafka-init` + `verify-topics.sh` + the topic check in `verify-stack.sh`). WireMock's healthcheck tries `curl` then `wget` (unverified which the image provides; it passes either way).
+- **Fail fast on OOM (noticed E4-0; for the first-deploy Dockerfile/compose, E11 k8s manifests):** run every worker JVM with `-XX:+ExitOnOutOfMemoryError` (e.g. via `JAVA_TOOL_OPTIONS`). If the heap fills inside `OffsetTracker.markComplete`, that offset is never recorded and the partition's commits freeze silently until a restart/rebalance; Kafka has no per-record timeout and redelivers nothing. Exiting turns it into a pod restart (seconds) and a redelivery from the committed offset. The spec has no OOM policy.
+- **Stuck-commit alert (noticed E4-0; for E7):** alert when a partition's committed offset stops advancing while records are still being processed. §15 has the per-partition lag metric but no such alert; it catches any lost `markComplete`.
+- **Drainer must not retry `markComplete` (noticed E4-0; for E4-2):** if it throws, the permit was already released in its `finally`; a second call releases twice.
+- **`verify.py` with `clean` and `-pl … -am` crashes (noticed E4-0):** `clean` on the parent deletes the root `target/` before the script writes `target/verify.log` (FileNotFoundError). Make the script create the directory.
 - **Learning backfill (human, no deadline pressure):** notes for already-closed tickets per `docs/learning/ticket-notes.md` — E2-1 → concept `cicd-pipeline` + tech `github-actions`; E2-2 → concept `containers` + tech `docker`. Write them `lite` whenever a Delegate ticket leaves spare time.
 - **Failsafe is configured in `pluginManagement` but not activated in any module** — it binds itself when a module first declares it, from E4/E5 integration tests onward.
 
