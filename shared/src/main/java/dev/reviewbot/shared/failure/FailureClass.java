@@ -30,6 +30,8 @@ public final class FailureClass {
   public static final FailureClass PR_CLOSED = of("PR_CLOSED", FailureKind.SKIP);
   public static final FailureClass SUSPENDED = of("SUSPENDED", FailureKind.SKIP);
   public static final FailureClass COMMAND_NOT_PERMITTED = of("COMMAND_NOT_PERMITTED", FailureKind.SKIP);
+  /** Not in §10.1: coalescing's verdict on an older same-PR event (§7.1 step 0). */
+  public static final FailureClass SUPERSEDED = of("SUPERSEDED", FailureKind.SKIP);
 
   /** §10.1 names the situations, not the classes; these names are ours. */
   public static final FailureClass GITHUB_UNAVAILABLE = of("GITHUB_UNAVAILABLE", FailureKind.TRANSIENT);

@@ -37,7 +37,7 @@ entry in `docs/learning/ticket-notes.md`.
 | One behaviour per test, in the test class named for it | — | E1-4 | 1 | — |
 | Bound untrusted input at the trust boundary | — | E3-0 | 1 | — |
 | Encapsulation (least visibility) | — | E3-0 | 1 | — |
-| A test must fail when the property breaks | — | E3-0, E3-2, E4-0 | 3 | yes: propose a registry entry |
+| A test must fail when the property breaks | — | E3-0, E3-2, E4-0, E4-1 | 4 | yes: propose a registry entry |
 | ISP (depend only on what you use) and acyclic package dependencies | solid | E3-0 | 1 | — |
 | Consistency (one vocabulary per method) | — | E3-0 | 1 | — |
 | Design for extension or prohibit it | — | E3-0 | 1 | — |
@@ -55,3 +55,5 @@ entry in `docs/learning/ticket-notes.md`.
 | I7 / O5 zombie completions are never committed and never contaminate a re-registration | kafka | E4-0 | 1 | — |
 | I3 contiguous watermark | — | E4-0 | 1 | — |
 | Spec wins (§8.4 O5 dirty tracking since last commit) | — | E4-0 | 1 | — |
+| DRY (one classification door, C-2) | — | E4-1 | 1 | — |
+| Narrow try scope | — | E4-1 | 1 | — |

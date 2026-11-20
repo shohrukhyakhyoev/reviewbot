@@ -54,6 +54,7 @@ Edit the tables, but keep their shape (slugs in backticks, `;`-separated lists, 
 | `caching-strategies` | Caching strategies (cache-aside, fail-open, repopulate, negative caching) | Caching › strategies |
 | `caching-levels` | Caching levels (in-process vs Redis vs DB) | Caching › levels |
 | `arch-message-vs-event` | Message-based vs event-based architecture | Async › Message/Event architecture |
+| `arch-parallel-consumer` | Parallel consumer: per-key order, cross-key parallelism, contiguous commits | Async › Message/Event architecture |
 | `webhook-vs-websocket-webjob` | WebHook vs WebSocket vs WebJob | Async › WebHook vs WebSocket vs WebJob |
 | `circuit-breaker` | Circuit breaker pattern (states, half-open, what must not trip it) | Microservices › Circuit Breakers |
 | `authn-vs-authz` | Authentication vs Authorization | Auth |
