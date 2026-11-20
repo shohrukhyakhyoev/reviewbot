@@ -28,6 +28,7 @@ class FailureClassTest {
         Arguments.of(FailureClass.PR_CLOSED, FailureKind.SKIP, Route.NONE, false),
         Arguments.of(FailureClass.SUSPENDED, FailureKind.SKIP, Route.NONE, false),
         Arguments.of(FailureClass.COMMAND_NOT_PERMITTED, FailureKind.SKIP, Route.NONE, false),
+        Arguments.of(FailureClass.SUPERSEDED, FailureKind.SKIP, Route.NONE, false),
         Arguments.of(
             FailureClass.GITHUB_UNAVAILABLE,
             FailureKind.TRANSIENT,
