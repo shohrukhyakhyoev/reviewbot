@@ -5,6 +5,14 @@ Verbatim, never edited. Not auto-read by any session; open it when you need hist
 
 ---
 
+### [E3-1] Event filter + envelope build — 2026-11-16
+- Built: `webhook-gateway/.../webhook/`: `EventFilter` (event type, then action, then required fields, then the draft rule → `Accept` / `Ignore` / `Malformed`), `PullRequestPayloadReader` (JSON tree by pointer; absent or null = missing), `EnvelopeFactory` (§3.1 envelope, validated by `EnvelopeValidator`), `WebhookIntake` (the one entry point; empty = answer 200), `WebhookMetrics` + `LoggingWebhookMetrics`; setting `reviewbot.gateway.review-drafts` (default false).
+- Decisions: see the Key decisions log (intake contract, filter order, draft setting, "missing" definition, gateway validates, metrics stand-in until E7). The human wrote `requiredNode` and `isSkippedDraft` (two wrong attempts first: the rule and `ready_for_review` on one line, then `||` for `&&`); Claude wrote the rest.
+- Files/modules: 9 main + 5 test files in `webhook-gateway/.../webhook/`; 9 payload fixtures and 4 golden envelopes under `src/test/resources`; `GatewayProperties`, `GatewayConfig`, `application.yml` changed.
+- Tests: golden envelope per accepted action; push, ping and closed ignored; every non-ready action on a draft under both settings; `ready_for_review` accepted on a draft fixture; each required field absent, null or wrongly typed; missing delivery id; the exception never quotes payload text. `verify.py` green: 554 tests, 98.0% overall. Five `/review-mine` rounds (R1–R8; R1 and R2 were should-fix; R6 fixed; R7 and R8 nits skipped by the human).
+- Hours: est 3.5 / actual 2
+- Learning: [x] concept:webhook-vs-websocket-webjob (https://app.notion.com/p/41a997ba8e7c814c8087f55a39c5c8a3; `lite`) · [x] adr:n/a · teach-back: pass (3/3; Q1 needed a follow-up)
+
 ### [E3-0] HMAC verification filter — 2026-11-16
 - Built: `webhook-gateway`: `HmacVerificationFilter` on `POST /webhook` (path and order pinned by a `FilterRegistrationBean`, ahead of every filter except character encoding), `CachedBodyHttpServletRequest` (reads the body once, replays the raw bytes, size cap), `SignatureVerifier` (HMAC-SHA256 over the raw bytes, `MessageDigest.isEqual`), `GatewayProperties` (`reviewbot.gateway.webhook-secret`, `max-body-size`).
 - Decisions: 25 MB body cap (default of `reviewbot.gateway.max-body-size`), checked before the signature, answers `413`: a scope extension, since the ticket allowed only 401 or pass-through; 25 MB is GitHub's payload cap (search results, pages not opened in full). The filter is not a bean (a `Filter` bean would also guard `/settings/**`). `SignatureVerifier` takes the secret as a `String`, so `webhook` does not depend on `config`. The human wrote the reject-or-pass branch in the filter; Claude wrote the rest, including `verify()` at the human's request.

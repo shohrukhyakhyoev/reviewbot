@@ -68,6 +68,14 @@ MENTOR_SHELL_OK = re.compile(
 )
 
 
+def local_env(name: str) -> str | None:
+    """Reads the gitignored settings.local.json directly, so a personal switch works without a restart."""
+    try:
+        return json.loads((ROOT / ".claude" / "settings.local.json").read_text(encoding="utf-8")).get("env", {}).get(name)
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
 def rel(path: str | None) -> str:
     if not path:
         return ""
@@ -229,7 +237,10 @@ def check(data: dict) -> list[tuple[str, str]]:
     if tool in FILE_TOOLS and path.startswith("docs/learning/inbox/"):
         found.append(("ask", f"{path} is a note. Approve only a /notes write|scaffold|sync you asked for, with text "
                              "that is your own words from the chat (Claude may only fix grammar/wording)."))
-    if tool.startswith("mcp__") and "otion" in tool and re.search(r"create-pages|update-page", tool):
+    # REVIEWBOT_NOTION_NO_ASK=1 (personal, in .claude/settings.local.json "env") waives this Notion prompt only.
+    notion_waived = os.environ.get("REVIEWBOT_NOTION_NO_ASK") == "1" or local_env("REVIEWBOT_NOTION_NO_ASK") == "1"
+    if (tool.startswith("mcp__") and "otion" in tool and re.search(r"create-pages|update-page", tool)
+            and not notion_waived):
         found.append(("ask", "Claude is about to write to Notion. Approve only a /notes write|scaffold|sync you asked "
                              "for, with note text that is your own words from the chat (grammar/wording fixes "
                              "only, no ideas added by Claude)."))
