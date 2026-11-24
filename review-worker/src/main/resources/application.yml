@@ -3,3 +3,6 @@ spring:
     name: review-worker
   main:
     web-application-type: none
+reviewbot:
+  worker:
+    kafka-bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}

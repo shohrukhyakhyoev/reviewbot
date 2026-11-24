@@ -3,11 +3,14 @@ package dev.reviewbot.worker.engine;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import java.util.List;
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.RebalanceInProgressException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +24,7 @@ class SafeEngineMetricsTest {
 
   private final TrackedOffset record = new TrackedOffset(P0, 1, 7);
   private final IllegalStateException cause = new IllegalStateException("handler bug");
+  private final RebalanceInProgressException commitRejected = new RebalanceInProgressException();
   private final Logger logger = (Logger) LoggerFactory.getLogger(SafeEngineMetrics.class);
   private final ListAppender<ILoggingEvent> logged = new ListAppender<>();
 
@@ -44,11 +48,17 @@ class SafeEngineMetricsTest {
     metrics.outcomeHandlerFailed(record, cause);
     metrics.markCompleteFailed(record, cause);
     metrics.strayInterruptCleared(record);
+    metrics.pauseState(PauseReason.BACKPRESSURE, true);
+    metrics.commitFailed(List.of(P0), commitRejected);
+    metrics.pollerDied(cause);
 
-    assertThat(recording.clearedInterrupts).containsExactly(record);
+    assertThat(recording.pollerDeaths).containsExactly(cause);
+    assertThat(recording.commitFailures).containsExactly(List.of(P0));
     assertThat(recording.closedPartitionRoutes).containsExactly(P0);
     assertThat(recording.outcomeHandlerFailures).containsExactly(cause);
     assertThat(recording.markCompleteFailures).containsExactly(cause);
+    assertThat(recording.clearedInterrupts).containsExactly(record);
+    assertThat(recording.pauseStates).containsExactly("BACKPRESSURE:true");
     assertThat(logged.list).isEmpty();
   }
 
@@ -63,6 +73,9 @@ class SafeEngineMetricsTest {
               metrics.outcomeHandlerFailed(record, cause);
               metrics.markCompleteFailed(record, cause);
               metrics.strayInterruptCleared(record);
+              metrics.pauseState(PauseReason.BACKPRESSURE, true);
+              metrics.commitFailed(List.of(P0), commitRejected);
+              metrics.pollerDied(cause);
             })
         .doesNotThrowAnyException();
 
@@ -76,7 +89,14 @@ class SafeEngineMetricsTest {
             "engine metrics failed, event not recorded event=markCompleteFailed lost=" + record
                 + " cause=java.lang.IllegalStateException metricsCause=java.lang.IllegalStateException",
             "engine metrics failed, event not recorded event=strayInterruptCleared lost=" + record
-                + " metricsCause=java.lang.IllegalStateException");
+                + " metricsCause=java.lang.IllegalStateException",
+            "engine metrics failed, event not recorded event=pauseState"
+                + " lost=BACKPRESSURE active=true metricsCause=java.lang.IllegalStateException",
+            "engine metrics failed, event not recorded event=commitFailed lost=[" + P0 + "]"
+                + " cause=org.apache.kafka.common.errors.RebalanceInProgressException"
+                + " metricsCause=java.lang.IllegalStateException",
+            "engine metrics failed, event not recorded event=pollerDied"
+                + " lost=java.lang.IllegalStateException metricsCause=java.lang.IllegalStateException");
     assertThat(logged.list)
         .extracting(ILoggingEvent::getFormattedMessage)
         .noneMatch(message -> message.contains("secret-host"));

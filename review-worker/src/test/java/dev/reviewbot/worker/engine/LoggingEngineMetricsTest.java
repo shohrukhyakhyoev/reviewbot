@@ -1,11 +1,16 @@
 package dev.reviewbot.worker.engine;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
+
+import java.util.List;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import org.apache.kafka.clients.consumer.CommitFailedException;
+import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.TopicPartition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,6 +79,66 @@ class LoggingEngineMetricsTest {
               assertThat(event.getLevel()).isEqualTo(Level.WARN);
               assertThat(event.getFormattedMessage()).contains("offset=1234");
             });
+  }
+
+  @Test
+  void pauseStateIsAnInfoLineNamingTheReasonAndValue() {
+    metrics.pauseState(PauseReason.BACKPRESSURE, true);
+    metrics.pauseState(PauseReason.BACKPRESSURE, false);
+
+    assertThat(logged.list)
+        .extracting(ILoggingEvent::getLevel, ILoggingEvent::getFormattedMessage)
+        .containsExactly(
+            tuple(Level.INFO, "pause_state reason=backpressure active=true"),
+            tuple(Level.INFO, "pause_state reason=backpressure active=false"));
+  }
+
+  @Test
+  void aFailedCommitIsAWarningNamingThePartitionsButNotTheMessage() {
+    var partition = new TopicPartition(Topics.REVIEW_REQUESTED, 2);
+
+    metrics.commitFailed(List.of(partition), new CommitFailedException("broker said secret"));
+
+    assertThat(logged.list)
+        .singleElement()
+        .satisfies(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.WARN);
+              assertThat(event.getFormattedMessage())
+                  .contains(partition.toString())
+                  .contains(CommitFailedException.class.getName())
+                  .doesNotContain("secret");
+            });
+  }
+
+  @Test
+  void aDeadPollerIsAnErrorNamingTheCauseAndThrowSiteButNotTheMessage() {
+    metrics.pollerDied(cause);
+
+    assertThat(logged.list)
+        .singleElement()
+        .satisfies(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.ERROR);
+              assertThat(event.getFormattedMessage())
+                  .contains(IllegalStateException.class.getName())
+                  .contains(LoggingEngineMetricsTest.class.getName())
+                  .doesNotContain("Secret.java");
+            });
+  }
+
+  @Test
+  void aDeadPollerLogsEachCauseAndItsLocationButNoMessage() {
+    metrics.pollerDied(new KafkaException("wrapper secret", cause));
+
+    assertThat(logged.list)
+        .singleElement()
+        .extracting(ILoggingEvent::getFormattedMessage)
+        .asString()
+        .contains(KafkaException.class.getName())
+        .contains(" | caused by " + IllegalStateException.class.getName() + " at ")
+        .doesNotContain("wrapper secret")
+        .doesNotContain("Secret.java");
   }
 
   private void assertErrorNamingTheRecordAndThrowSiteButNotTheMessage() {

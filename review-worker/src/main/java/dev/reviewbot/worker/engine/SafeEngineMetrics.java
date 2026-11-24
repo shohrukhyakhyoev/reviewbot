@@ -1,5 +1,7 @@
 package dev.reviewbot.worker.engine;
 
+import java.util.Collection;
+
 import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +50,25 @@ final class SafeEngineMetrics implements EngineMetrics {
   @Override
   public void strayInterruptCleared(TrackedOffset record) {
     contain("strayInterruptCleared", record.toString(), () -> delegate.strayInterruptCleared(record));
+  }
+
+  @Override
+  public void pauseState(PauseReason reason, boolean active) {
+    contain(
+        "pauseState", reason.name() + " active=" + active, () -> delegate.pauseState(reason, active));
+  }
+
+  @Override
+  public void commitFailed(Collection<TopicPartition> partitions, Exception cause) {
+    contain(
+        "commitFailed",
+        partitions + " cause=" + cause.getClass().getName(),
+        () -> delegate.commitFailed(partitions, cause));
+  }
+
+  @Override
+  public void pollerDied(Throwable cause) {
+    contain("pollerDied", cause.getClass().getName(), () -> delegate.pollerDied(cause));
   }
 
   private static String lost(TrackedOffset record, Throwable cause) {
