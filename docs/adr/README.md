@@ -17,3 +17,6 @@ When an ADR is required: see `docs/learning/ticket-notes.md` (ADR column). `/clo
 | # | Title | Ticket | Status |
 |---|---|---|---|
 | [0001](0001-one-deadline-for-gateway-produce.md) | Bound the gateway produce with one shared 5 s deadline | E3-3 | accepted |
+| [0002](0002-seeded-random-property-tests.md) | Property-test the OffsetTracker with seeded `java.util.Random`, not jqwik | E4-0 | accepted |
+| [0003](0003-poller-start-mechanism.md) | Start and stop the poller through `SmartLifecycle` | E4-3 | accepted |
+| [0004](0004-poller-fault-scopes.md) | Contain a poller fault while the invariants hold; fail fast when a record would be lost | E4-3 | accepted |

@@ -77,6 +77,7 @@ class EngineStressTest {
           new Dispatcher(
               drainerThreads,
               Drainer.factory(overlapDetectingJobs, handler, tracker, metrics),
+              BadKeyTasks.completingAsPoison(handler, tracker, metrics),
               metrics);
       List<TopicPartition> partitions = new ArrayList<>();
       for (int p = 0; p < ROUTERS; p++) {

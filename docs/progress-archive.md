@@ -5,6 +5,14 @@ Verbatim, never edited. Not auto-read by any session; open it when you need hist
 
 ---
 
+### [E3-2] Delivery dedup component — 2026-11-16
+- Built: `webhook-gateway/.../dedup/`: `DeliveryDedup` (`check` = `EXISTS delivery:{guid}`, fail-open on `RedisException`; `markEnqueued` = `setIfAbsent` with the 24 h TTL, swallows `RedisException`), `DedupMetrics` + `LoggingDedupMetrics`; `GatewayConfig.redissonClient` (lazy, 2 s timeouts, no retries); setting `reviewbot.gateway.redis-url`.
+- Decisions: see the Key decisions log (two calls never merged, Redisson config, metrics without delivery id, Docker for gateway tests). The human wrote `check` (three rounds: wrong key and codec, no catch, inverted hit/miss) and the core of `markEnqueued`; Claude wrote the rest, including every test after `aMarkedDeliveryIsAHit`, at the human's request.
+- Files/modules: 3 main files in `webhook-gateway/.../dedup/` and 2 test classes; `GatewayConfig`, `GatewayProperties`, `application.yml` and `webhook-gateway/pom.xml` (redisson, Testcontainers) changed; `ReviewbotProperties` is now registered in the gateway.
+- Tests: 8 in `DeliveryDedupTest` (Testcontainers Redis: miss; miss, mark, hit; NX no-op; TTL within a minute of 24 h; closed port; paused container for both operations within 2.5 s; invalid id not swallowed) and 3 in `LoggingDedupMetricsTest`. `verify.py` green: 570 tests, 98.1% overall (`webhook-gateway` 98.2%). Three `/review-mine` rounds (R1–R3, all nits, all fixed).
+- Hours: est 2 / actual 3
+- Learning: [x] concept:caching-strategies (https://app.notion.com/p/41a997ba8e7c811fa848c2c3ad0f1f51; `lite`) · [x] tech:redis (https://app.notion.com/p/41a997ba8e7c8138bba9c13c978c82ef; `lite`) · [x] adr:n/a · teach-back: pass (3/3; Q1 and Q3 needed a follow-up)
+
 ### [E3-1] Event filter + envelope build — 2026-11-16
 - Built: `webhook-gateway/.../webhook/`: `EventFilter` (event type, then action, then required fields, then the draft rule → `Accept` / `Ignore` / `Malformed`), `PullRequestPayloadReader` (JSON tree by pointer; absent or null = missing), `EnvelopeFactory` (§3.1 envelope, validated by `EnvelopeValidator`), `WebhookIntake` (the one entry point; empty = answer 200), `WebhookMetrics` + `LoggingWebhookMetrics`; setting `reviewbot.gateway.review-drafts` (default false).
 - Decisions: see the Key decisions log (intake contract, filter order, draft setting, "missing" definition, gateway validates, metrics stand-in until E7). The human wrote `requiredNode` and `isSkippedDraft` (two wrong attempts first: the rule and `ready_for_review` on one line, then `||` for `&&`); Claude wrote the rest.

@@ -63,7 +63,7 @@ class DrainerTest {
           spawns.incrementAndGet();
           return real.create(key, queue, retirer);
         };
-    return new Dispatcher(threads, counting, engineMetrics);
+    return new Dispatcher(threads, counting, tracked -> () -> {}, engineMetrics);
   }
 
   private JobExecutor succeeding() {
@@ -434,7 +434,7 @@ class DrainerTest {
     DrainerFactory real =
         Drainer.factory(succeeding(), recordingHandler, tracker, metrics, slipping);
     var threads = new HeldThreads();
-    var dispatcher = new Dispatcher(threads, real, metrics);
+    var dispatcher = new Dispatcher(threads, real, tracked -> () -> {}, metrics);
     dispatch(dispatcher, CoalescerTest.valid(1));
     dispatch(dispatcher, CoalescerTest.valid(2));
 

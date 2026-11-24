@@ -19,6 +19,9 @@ import java.util.function.Supplier;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import dev.reviewbot.shared.config.Topics;
 import dev.reviewbot.shared.keys.PrKey;
@@ -41,8 +44,15 @@ class DispatcherTest {
         return () -> {};
       };
 
+  private final List<TrackedRecord> badKeyRecords = new CopyOnWriteArrayList<>();
+  private final BadKeyTasks badKeyTasks =
+      tracked -> {
+        badKeyRecords.add(tracked);
+        return () -> {};
+      };
+
   private Dispatcher dispatcher(Executor executor) {
-    return new Dispatcher(executor, recordingFactory, metrics);
+    return new Dispatcher(executor, recordingFactory, badKeyTasks, metrics);
   }
 
   private Dispatcher dispatcher() {
@@ -151,7 +161,8 @@ class DispatcherTest {
 
   @Test
   void aThrowingMetricsBackendStillLetsAClosedPartitionRecordThrough() {
-    var dispatcher = new Dispatcher(started::add, recordingFactory, new ThrowingEngineMetrics());
+    var dispatcher = new Dispatcher(
+            started::add, recordingFactory, badKeyTasks, new ThrowingEngineMetrics());
     dispatcher.markClosed(List.of(P0));
 
     dispatcher.route(tracked(PR_7, 1));
@@ -171,16 +182,31 @@ class DispatcherTest {
     assertThat(spawns).hasSize(1);
   }
 
-  @Test
-  void aMalformedKeyThrowsBeforeAnythingIsQueuedOrStarted() {
+  @ParameterizedTest
+  @NullSource
+  @ValueSource(strings = {"not-a-pr-key", "1:acme/app:"})
+  void aKeyThatNamesNoPrStartsItsPoisonTaskWithoutAQueueOrDrainer(String key) {
     var dispatcher = dispatcher();
+    var bad = tracked(key, 1);
+
+    dispatcher.route(bad);
+
+    assertThat(badKeyRecords).containsExactly(bad);
+    assertThat(started).hasSize(1);
+    assertThat(spawns).isEmpty();
+    assertThat(dispatcher.activeKeys()).isZero();
+  }
+
+  @Test
+  void aRejectedPoisonTaskPropagatesSoTheRecordIsNotCompleted() {
+    var dispatcher =
+        dispatcher(
+            task -> {
+              throw new RejectedExecutionException("shut down");
+            });
 
     assertThatThrownBy(() -> dispatcher.route(tracked("not-a-pr-key", 1)))
-        .isInstanceOf(IllegalArgumentException.class);
-
-    assertThat(spawns).isEmpty();
-    assertThat(started).isEmpty();
-    assertThat(dispatcher.activeKeys()).isZero();
+        .isInstanceOf(RejectedExecutionException.class);
   }
 
   @Test
@@ -239,6 +265,7 @@ class DispatcherTest {
                 roundSpawns.add(new Spawn(key, queue));
                 return () -> {};
               },
+              badKeyTasks,
               metrics);
       dispatcher.route(tracked(PR_7, 0));
       PrQueue original = roundSpawns.getFirst().queue();
@@ -300,7 +327,7 @@ class DispatcherTest {
                 return empty;
               }
             };
-    var dispatcher = new Dispatcher(started::add, recordingFactory, metrics, pausingQueues);
+    var dispatcher = new Dispatcher(started::add, recordingFactory, badKeyTasks, metrics, pausingQueues);
     dispatcher.route(tracked(PR_7, 0));
     PrQueue original = spawns.getFirst().queue();
     original.drainAll();
@@ -336,7 +363,8 @@ class DispatcherTest {
     var ran = new CountDownLatch(1);
     try (var virtualThreads = Executors.newVirtualThreadPerTaskExecutor()) {
       var dispatcher =
-          new Dispatcher(virtualThreads, (key, queue, retirer) -> ran::countDown, metrics);
+          new Dispatcher(
+              virtualThreads, (key, queue, retirer) -> ran::countDown, badKeyTasks, metrics);
 
       dispatcher.route(tracked(PR_7, 1));
 

@@ -22,28 +22,22 @@ final class Drainer implements Runnable {
   private final PrQueue queue;
   private final Retirer retirer;
   private final JobExecutor jobs;
-  private final OutcomeHandler outcomes;
   private final Function<List<ConsumerRecord<String, byte[]>>, CoalescePlan> coalescer;
-  private final OffsetTracker tracker;
-  private final EngineMetrics metrics;
+  private final RecordCompleter completer;
 
   private Drainer(
       PrKey key,
       PrQueue queue,
       Retirer retirer,
       JobExecutor jobs,
-      OutcomeHandler outcomes,
       Function<List<ConsumerRecord<String, byte[]>>, CoalescePlan> coalescer,
-      OffsetTracker tracker,
-      EngineMetrics metrics) {
+      RecordCompleter completer) {
     this.key = key;
     this.queue = queue;
     this.retirer = retirer;
     this.jobs = jobs;
-    this.outcomes = outcomes;
     this.coalescer = coalescer;
-    this.tracker = tracker;
-    this.metrics = metrics;
+    this.completer = completer;
   }
 
   static DrainerFactory factory(
@@ -57,9 +51,8 @@ final class Drainer implements Runnable {
       OffsetTracker tracker,
       EngineMetrics metrics,
       Function<List<ConsumerRecord<String, byte[]>>, CoalescePlan> coalescer) {
-    EngineMetrics safeMetrics = SafeEngineMetrics.wrap(metrics);
-    return (key, queue, retirer) ->
-        new Drainer(key, queue, retirer, jobs, outcomes, coalescer, tracker, safeMetrics);
+    var completer = new RecordCompleter(outcomes, tracker, metrics);
+    return (key, queue, retirer) -> new Drainer(key, queue, retirer, jobs, coalescer, completer);
   }
 
   @Override
@@ -83,11 +76,11 @@ final class Drainer implements Runnable {
     } catch (Throwable planFailure) {
       // Nothing in the batch is complete yet, so the failure becomes every record's one outcome.
       Outcome outcome = FailureClassifier.classify(planFailure);
-      batch.forEach(tracked -> complete(tracked, outcome));
+      batch.forEach(tracked -> completer.complete(tracked, outcome));
       return;
     }
     for (Step step : steps) {
-      complete(step.tracked(), step.outcome().get());
+      completer.complete(step.tracked(), step.outcome().get());
     }
   }
 
@@ -140,33 +133,6 @@ final class Drainer implements Runnable {
       return jobs.execute(job);
     } catch (Throwable jobFailure) {
       return FailureClassifier.classify(jobFailure);
-    }
-  }
-
-  /** The only place a record leaves the engine: one {@code markComplete}, handler or not. */
-  private void complete(TrackedRecord done, Outcome outcome) {
-    // E4-2 policy, not spec: §12 only says shutdown stops intake and waits; E4-3/E4-4 own what
-    // happens after the wait (ADR candidate). Until then a stray interrupt is cleared, so the
-    // handler's retry or DLQ produce cannot fail on it (I9), and reported, so it is never silent.
-    if (Thread.interrupted()) {
-      metrics.strayInterruptCleared(done.trackedOffset());
-    }
-    try {
-      outcomes.handle(done.record(), outcome);
-    } catch (Throwable handlerFailure) {
-      metrics.outcomeHandlerFailed(done.trackedOffset(), handlerFailure);
-    } finally {
-      markComplete(done);
-    }
-  }
-
-  // Never retried: it runs once per record, and a throwing markComplete has already settled the
-  // permit in its finally (E4-0).
-  private void markComplete(TrackedRecord done) {
-    try {
-      tracker.markComplete(done.trackedOffset());
-    } catch (Throwable completionFailure) {
-      metrics.markCompleteFailed(done.trackedOffset(), completionFailure);
     }
   }
 }

@@ -11,8 +11,8 @@ import org.apache.kafka.common.TopicPartition;
 import dev.reviewbot.shared.keys.PrKey;
 
 /**
- * Routes each record to its PR's queue, starting a drainer for a PR that has none (§8.2). Pure
- * routing: never touches the semaphore or the tracker.
+ * Routes each record to its PR's queue, starting a drainer for a PR that has none (§8.2). A key
+ * that names no PR gets its own poison task. Never touches the semaphore or the tracker.
  */
 final class Dispatcher {
 
@@ -20,11 +20,16 @@ final class Dispatcher {
   private final Set<TopicPartition> closed = ConcurrentHashMap.newKeySet();
   private final Executor drainerThreads;
   private final DrainerFactory drainers;
+  private final BadKeyTasks badKeyTasks;
   private final EngineMetrics metrics;
   private final Supplier<PrQueue> newQueue;
 
-  Dispatcher(Executor drainerThreads, DrainerFactory drainers, EngineMetrics metrics) {
-    this(drainerThreads, drainers, metrics, PrQueue::new);
+  Dispatcher(
+      Executor drainerThreads,
+      DrainerFactory drainers,
+      BadKeyTasks badKeyTasks,
+      EngineMetrics metrics) {
+    this(drainerThreads, drainers, badKeyTasks, metrics, PrQueue::new);
   }
 
   // drainerThreads must start each drainer on another thread: execute runs inside compute, and a
@@ -32,21 +37,28 @@ final class Dispatcher {
   Dispatcher(
       Executor drainerThreads,
       DrainerFactory drainers,
+      BadKeyTasks badKeyTasks,
       EngineMetrics metrics,
       Supplier<PrQueue> newQueue) {
     this.drainerThreads = drainerThreads;
     this.drainers = drainers;
+    this.badKeyTasks = badKeyTasks;
     this.metrics = SafeEngineMetrics.wrap(metrics);
     this.newQueue = newQueue;
   }
 
   void route(TrackedRecord tracked) {
-    // Parsed before compute: a bad key must throw before any side effect inside the lambda.
-    PrKey key = PrKey.parse(tracked.record().key());
     TopicPartition partition = tracked.trackedOffset().partition();
     if (closed.contains(partition)) {
       // Still enqueued: the record holds a permit, and dropping it would leak that permit (I4).
       metrics.routedToClosedPartition(partition);
+    }
+    PrKey key;
+    try {
+      key = PrKey.parse(tracked.record().key());
+    } catch (IllegalArgumentException notAPrKey) {
+      drainerThreads.execute(badKeyTasks.create(tracked));
+      return;
     }
     queues.compute(
         key,

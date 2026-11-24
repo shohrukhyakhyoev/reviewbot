@@ -38,8 +38,8 @@ State and Actual h through `/ticket` (→ `wip`) and `/close` (→ `done`).
 | E3-3 | Producer + endpoint orchestration | M | Pair     | all | done | core | 7 | 5 | E3-1, E3-2, E1-5 |
 | E4-0 | OffsetTracker | M | Pair     | all | done | core | 7 | 4 | E2-0 |
 | E4-1 | Coalescer (pipeline step 0) | S | Pair     | all | done | core | 4 | 3 | E1-0, E1-2 |
-| E4-2 | Dispatcher + drainer + retirement | L | Pair       | all | done | core | 10 | 4 | E4-0, E4-1, E1-1 |
-| E4-3 | Poller | M | Own      | all | todo | core | 7 | — | E4-0, E4-2, E1-5 |
+| E4-2 | Dispatcher + drainer + retirement | L | Pair     | all | done | core | 10 | 4 | E4-0, E4-1, E1-1 |
+| E4-3 | Poller | M | Pair      | all | done | core | 7 | 6 | E4-0, E4-2, E1-5 |
 | E4-4 | Rebalance listener + shutdown | M | Own      | all | todo | core | 7 | — | E4-3 |
 | E4-5 | Engine integration test | L | Pair     | — | todo | core | 5 | — | E4-4 |
 | E5-0 | Reviews persistence + claim state machine | L | Own      | all | todo | core | 10 | — | E2-3, E1-2, E1-5 |
