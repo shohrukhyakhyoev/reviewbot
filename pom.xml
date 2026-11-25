@@ -167,6 +167,11 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>${maven-failsafe-plugin.version}</version>
+          <configuration>
+            <!-- Failsafe runs after package; spring-boot repackage has moved the module jar's
+                 classes under BOOT-INF/, so test against the plain classes directory instead. -->
+            <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+          </configuration>
           <executions>
             <execution>
               <goals>

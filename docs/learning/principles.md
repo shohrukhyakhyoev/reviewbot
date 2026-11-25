@@ -15,8 +15,8 @@ entry in `docs/learning/ticket-notes.md`.
 | Fail fast (codec symmetry) | — | E1-0 | 1 | — |
 | Exhaustive switch over a closed set (Java 21) | — | E1-0, E1-2 | 2 | yes: propose a registry entry |
 | Types that tell the truth (nullability) | — | E1-0 | 1 | — |
-| Actionable failure messages | — | E1-0, E1-1, E1-2, E4-2 | 4 | yes: propose a registry entry |
-| Comments match the code | — | E1-0, E1-1, E1-2, E3-1, E3-2, E4-2, E4-3, E4-4 | 8 | yes: propose a registry entry |
+| Actionable failure messages | — | E1-0, E1-1, E1-2, E4-2, E4-5 | 5 | yes: propose a registry entry |
+| Comments match the code | — | E1-0, E1-1, E1-2, E3-1, E3-2, E4-2, E4-3, E4-4, E4-5 | 9 | yes: propose a registry entry |
 | Fail fast on malformed input | — | E1-0, E1-1, E1-4, E4-0, E4-3 | 5 | yes: propose a registry entry |
 | Canonical form (parse inverts render exactly) | — | E1-1 | 1 | — |
 | DRY (one place for the key format) | — | E1-1 | 1 | — |
@@ -27,17 +27,17 @@ entry in `docs/learning/ticket-notes.md`.
 | Types that tell the truth (closed set, not strings) | — | E1-2, E3-1 | 2 | yes: propose a registry entry |
 | Optional never as a field or parameter | — | E1-2 | 1 | — |
 | §7.1 breaker open ⇒ BREAKER_PARKED with frozen counters (§11.2) | circuit-breaker | E1-2 | 1 | — |
-| Names that say intent | — | E1-2, E1-4, E3-0, E3-3, E4-4 | 5 | yes: propose a registry entry |
+| Names that say intent | — | E1-2, E1-4, E3-0, E3-3, E4-4, E4-5 | 6 | yes: propose a registry entry |
 | DRY | — | E1-2, E4-2 | 2 | yes: propose a registry entry |
 | §10.1 route by kind first (I5 catch-all classifies correctly) | circuit-breaker | E1-2 | 1 | — |
-| YAGNI | — | E1-2, E4-2, E4-3 | 3 | yes: propose a registry entry |
+| YAGNI | — | E1-2, E4-2, E4-3, E4-5 | 4 | yes: propose a registry entry |
 | Acceptance criteria met as written | — | E1-4, E4-2, E4-3, E4-4 | 4 | yes: propose a registry entry |
 | Comments for the non-obvious why (CLAUDE.md rule 6) | — | E1-4, E3-3, E4-0 | 3 | yes: propose a registry entry |
 | Precise exception types (one contract per package) | — | E1-4 | 1 | — |
 | One behaviour per test, in the test class named for it | — | E1-4 | 1 | — |
 | Bound untrusted input at the trust boundary | — | E3-0 | 1 | — |
 | Encapsulation (least visibility) | — | E3-0 | 1 | — |
-| A test must fail when the property breaks | — | E3-0, E3-2, E4-0, E4-1, E4-2, E4-3, E4-4 | 7 | yes: propose a registry entry |
+| A test must fail when the property breaks | — | E3-0, E3-2, E4-0, E4-1, E4-2, E4-3, E4-4, E4-5 | 8 | yes: propose a registry entry |
 | ISP (depend only on what you use) and acyclic package dependencies | solid | E3-0 | 1 | — |
 | Consistency (one vocabulary per method) | — | E3-0, E4-4 | 2 | yes: propose a registry entry |
 | Design for extension or prohibit it | — | E3-0 | 1 | — |
@@ -46,7 +46,7 @@ entry in `docs/learning/ticket-notes.md`.
 | Types that tell the truth (a `field` parameter carries a field name) | observability | E3-1 | 1 | — |
 | Consistency (one typing rule per reader) | — | E3-1 | 1 | — |
 | Explicit contracts (no hidden coupling between reader and validator) | — | E3-1 | 1 | — |
-| Comments match the code (no unverified claims) | — | E3-1, E4-2 | 2 | yes: propose a registry entry |
+| Comments match the code (no unverified claims) | — | E3-1, E4-2, E4-5 | 3 | yes: propose a registry entry |
 | SRP (counting vs diagnostic logging in one port) | solid | E3-1 | 1 | — |
 | §6.1 4d every produce failure is a 503 (closed outcome set) | rest-principles | E3-3 | 1 | — |
 | Nothing lost on failure paths | observability | E3-3, E4-2, E4-3 | 3 | yes: append to `observability` |
@@ -57,7 +57,7 @@ entry in `docs/learning/ticket-notes.md`.
 | Spec wins (§8.4 O5 dirty tracking since last commit) | — | E4-0 | 1 | — |
 | DRY (one classification door, C-2) | — | E4-1 | 1 | — |
 | Narrow try scope | — | E4-1, E4-3 | 2 | yes: propose a registry entry |
-| I4 permit conservation | concurrency-semaphore | E4-2 | 1 | — |
+| I4 permit conservation | concurrency-semaphore | E4-2, E4-5 | 2 | yes: append to `concurrency-semaphore` |
 | I5 nothing falls through (outermost catch-all) | — | E4-2 | 1 | — |
 | Tests without sleeps or real time | — | E4-2, E4-3, E4-4 | 3 | yes: propose a registry entry |
 | A test must fail when the property breaks (I10) | concurrency-chm-compute | E4-2 | 1 | — |
@@ -73,3 +73,7 @@ entry in `docs/learning/ticket-notes.md`.
 | Explicit contracts (a derived time bound covers every path) | bean-lifecycle | E4-4 | 1 | — |
 | Types that tell the truth | — | E4-4 | 1 | — |
 | I7 zombie progress is never committed (the coordinator's rejection is backstop only) | kafka | E4-4 | 1 | — |
+| I7 zombie completions still release the permit (I4) | kafka | E4-5 | 1 | — |
+| Tests without sleeps or real time (no hidden timing assumption) | — | E4-5 | 1 | — |
+| Test isolation | — | E4-5 | 1 | — |
+| Reproducible randomized tests (a logged seed must replay the run) | — | E4-5 | 1 | — |
