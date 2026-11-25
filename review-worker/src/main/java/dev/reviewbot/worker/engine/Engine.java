@@ -15,6 +15,7 @@ import dev.reviewbot.shared.config.Topics;
 public final class Engine {
 
   private final Poller poller;
+  private final Semaphore inFlight;
   private final ExecutorService drainerThreads;
   private final Duration pollerStopWait;
   private final ReentrantLock lifecycle = new ReentrantLock();
@@ -44,7 +45,7 @@ public final class Engine {
       ReviewbotProperties.Consumer settings,
       Runnable onPollerDeath,
       ExecutorService drainerThreads) {
-    var inFlight = new Semaphore(settings.inFlightCap());
+    this.inFlight = new Semaphore(settings.inFlightCap());
     var tracker = new OffsetTracker(inFlight);
     var dispatcher =
         new Dispatcher(
@@ -120,6 +121,11 @@ public final class Engine {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
+  }
+
+  // Test seam: the integration test checks permit conservation (I4) as an equality.
+  int availablePermits() {
+    return inFlight.availablePermits();
   }
 
   /** E8's breaker and health checks call this from their own threads. */
