@@ -1,5 +1,6 @@
 package dev.reviewbot.worker.engine;
 
+import static dev.reviewbot.worker.engine.Committables.offsetsOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 
@@ -61,7 +62,8 @@ class OffsetTrackerConcurrencyTest {
                   while (!drainersDone.get()) {
                     var snapshot = tracker.committable();
                     snapshot.forEach(
-                        (tp, wm) -> {
+                        (tp, mark) -> {
+                          long wm = mark.offset();
                           Long previous = lastSeen.put(tp, wm);
                           if (previous != null && wm <= previous) {
                             pollerViolations.add(tp + ": " + previous + " then " + wm);
@@ -93,7 +95,7 @@ class OffsetTrackerConcurrencyTest {
     poller.join(TimeUnit.SECONDS.toMillis(10));
     assertThat(poller.isAlive()).as("poller finished").isFalse();
     assertThat(pollerFailure.get()).as("poller failure").isNull();
-    tracker.committable().forEach(lastSeen::put);
+    offsetsOf(tracker.committable()).forEach(lastSeen::put);
 
     assertThat(pollerViolations).isEmpty();
     assertThat(lastSeen)

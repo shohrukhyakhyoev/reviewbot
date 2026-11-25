@@ -25,8 +25,14 @@ interface EngineMetrics {
   /** Sets the {@code pause_state} gauge for one reason: is it holding intake closed right now? */
   void pauseState(PauseReason reason, boolean active);
 
-  /** Kafka rejected an async commit; the same watermarks go out again next cycle. */
+  /** Kafka rejected a commit: an async one is resent next cycle, a sync one leaves the redo to the next owner. */
   void commitFailed(Collection<TopicPartition> partitions, Exception cause);
+
+  /** Shutdown stopped waiting with records still running; the next owner redoes them. */
+  void shutdownGraceExpired(int stillInFlight);
+
+  /** The consumer did not leave the group cleanly; its partitions move after the session timeout. */
+  void consumerCloseFailed(Exception cause);
 
   /** Something escaped the poll loop; the worker consumes nothing until it is restarted. */
   void pollerDied(Throwable cause);

@@ -1,5 +1,6 @@
 package dev.reviewbot.worker.engine;
 
+import static dev.reviewbot.worker.engine.Committables.offsetsOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
@@ -125,7 +126,7 @@ class EngineStressTest {
       assertThat(metrics.outcomeHandlerFailures).isEmpty();
       assertThat(metrics.markCompleteFailures).isEmpty();
       for (TopicPartition tp : partitions) {
-        assertThat(tracker.committable()).containsEntry(tp, (long) PER_ROUTER - 1);
+        assertThat(offsetsOf(tracker.committable())).containsEntry(tp, (long) PER_ROUTER - 1);
       }
     }
   }

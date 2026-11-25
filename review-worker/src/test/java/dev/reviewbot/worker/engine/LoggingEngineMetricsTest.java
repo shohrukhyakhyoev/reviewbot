@@ -112,6 +112,34 @@ class LoggingEngineMetricsTest {
   }
 
   @Test
+  void aFailedCloseIsAWarningNamingTheCauseButNotTheMessage() {
+    metrics.consumerCloseFailed(new KafkaException("broker-host secret"));
+
+    assertThat(logged.list)
+        .singleElement()
+        .satisfies(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.WARN);
+              assertThat(event.getFormattedMessage())
+                  .contains(KafkaException.class.getName())
+                  .doesNotContain("secret");
+            });
+  }
+
+  @Test
+  void anExpiredShutdownGraceIsAWarningWithTheCountStillInFlight() {
+    metrics.shutdownGraceExpired(12);
+
+    assertThat(logged.list)
+        .singleElement()
+        .satisfies(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.WARN);
+              assertThat(event.getFormattedMessage()).contains("in flight=12");
+            });
+  }
+
+  @Test
   void aDeadPollerIsAnErrorNamingTheCauseAndThrowSiteButNotTheMessage() {
     metrics.pollerDied(cause);
 

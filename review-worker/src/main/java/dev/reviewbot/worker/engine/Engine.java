@@ -14,8 +14,6 @@ import dev.reviewbot.shared.config.Topics;
 /** The consumer engine (§8): one poller thread feeding per-PR drainers on virtual threads. */
 public final class Engine {
 
-  private static final int POLL_CYCLES_TO_WAIT_ON_STOP = 5;
-
   private final Poller poller;
   private final ExecutorService drainerThreads;
   private final Duration pollerStopWait;
@@ -63,16 +61,21 @@ public final class Engine {
             dispatcher,
             metrics,
             settings,
+            Sleeper.THREAD,
             onPollerDeath);
     this.drainerThreads = drainerThreads;
-    this.pollerStopWait = settings.pollTimeout().multipliedBy(POLL_CYCLES_TO_WAIT_ON_STOP);
+    this.pollerStopWait = pollerShutdownBudget(settings);
   }
 
   public void start() {
     lifecycle.lock();
     try {
       if (pollerThread == null) {
-        pollerThread = Thread.ofPlatform().name("review-poller").start(this::runPollerThenStopDrainers);
+        pollerThread =
+            Thread.ofPlatform()
+                .name("review-poller")
+                .daemon(false)
+                .start(this::runPollerThenStopDrainers);
       }
     } finally {
       lifecycle.unlock();
@@ -89,6 +92,18 @@ public final class Engine {
     } finally {
       lifecycle.unlock();
     }
+  }
+
+  // The poller's worst-case way out: a revocation already in progress, the wait for in-flight work,
+  // then the final commit and the close. Returning sooner lets the JVM exit and kill it mid-way.
+  static Duration pollerShutdownBudget(ReviewbotProperties.Consumer settings) {
+    Duration revocationInProgress =
+        settings.revocationGrace().plus(settings.kafkaCallTimeout().multipliedBy(2));
+    Duration finalCommitAndClose = settings.kafkaCallTimeout().multipliedBy(2);
+    return settings.pollTimeout()
+        .plus(revocationInProgress)
+        .plus(settings.shutdownGrace())
+        .plus(finalCommitAndClose);
   }
 
   private void runPollerThenStopDrainers() {

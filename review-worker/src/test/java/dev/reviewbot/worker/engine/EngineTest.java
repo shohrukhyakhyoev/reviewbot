@@ -36,6 +36,18 @@ import dev.reviewbot.worker.engine.CoalescePlan.Job;
 class EngineTest {
 
   private static final TopicPartition P0 = new TopicPartition(Topics.REVIEW_REQUESTED, 0);
+  private static final ReviewbotProperties.Consumer DEFAULTS =
+      new ReviewbotProperties.Consumer(
+          Duration.ofSeconds(45),
+          Duration.ofSeconds(3),
+          Duration.ofSeconds(300),
+          Duration.ofMillis(200),
+          100,
+          200,
+          100,
+          Duration.ofSeconds(30),
+          Duration.ofSeconds(3),
+          Duration.ofSeconds(10));
   private static final ReviewbotProperties.Consumer SETTINGS =
       new ReviewbotProperties.Consumer(
           Duration.ofSeconds(45),
@@ -45,17 +57,21 @@ class EngineTest {
           100,
           200,
           100,
-          Duration.ofSeconds(30));
+          Duration.ofSeconds(30),
+          Duration.ofSeconds(3),
+          Duration.ofSeconds(10));
 
   private final ObservedConsumer consumer = new ObservedConsumer();
   private final ObservedDrainerThreads drainerThreads = new ObservedDrainerThreads(consumer);
   private final List<Job> executedJobs = new CopyOnWriteArrayList<>();
   private final List<Outcome> handledOutcomes = new CopyOnWriteArrayList<>();
   private final AtomicInteger pollerDeaths = new AtomicInteger();
+  private volatile Duration jobDuration = Duration.ZERO;
   private final Engine engine =
       new Engine(
           consumer,
           job -> {
+            Sleeper.THREAD.sleep(jobDuration);
             executedJobs.add(job);
             return new Outcome.Success();
           },
@@ -194,17 +210,69 @@ class EngineTest {
 
   @Test
   void aPollerOutlivingTheStopWaitKeepsTheDrainerExecutorOpenUntilItExits() {
+    var quickToGiveUp =
+        new Engine(
+            consumer,
+            job -> new Outcome.Success(),
+            (record, outcome) -> {},
+            new RecordingEngineMetrics(),
+            new ReviewbotProperties.Consumer(
+                Duration.ofSeconds(45),
+                Duration.ofSeconds(3),
+                Duration.ofSeconds(300),
+                Duration.ofMillis(20),
+                100,
+                200,
+                100,
+                Duration.ofMillis(20),
+                Duration.ofMillis(20),
+                Duration.ofMillis(20)),
+            pollerDeaths::incrementAndGet,
+            drainerThreads);
     var pollRelease = new CountDownLatch(1);
     consumer.pollRelease = pollRelease;
-    engine.start();
+    quickToGiveUp.start();
     awaitPolls(1);
 
-    engine.stop();
+    quickToGiveUp.stop();
     boolean shutWhilePollerAlive = drainerThreads.isShutdown();
     pollRelease.countDown();
 
     assertThat(shutWhilePollerAlive).isFalse();
     await().until(drainerThreads::isShutdown);
+  }
+
+  @Test
+  void stopReturnsOnlyAfterInFlightWorkFinishedAndWasCommitted() {
+    jobDuration = Duration.ofMillis(500);
+    assignP0WithOneRecordOnFirstPoll();
+    engine.start();
+    awaitPolls(2);
+
+    engine.stop();
+
+    assertThat(executedJobs).hasSize(1);
+    assertThat(consumer.lastSyncCommit).isEqualTo(Map.of(P0, new OffsetAndMetadata(1)));
+    assertThat(consumer.closedByThread).isEqualTo("review-poller");
+  }
+
+  @Test
+  void thePollerIsANonDaemonThreadSoItKeepsTheWorkerProcessAlive() throws InterruptedException {
+    // Started from a daemon thread: a poller that merely inherited the flag would be a daemon too.
+    Thread.ofPlatform().daemon(true).start(engine::start).join();
+    awaitPolls(1);
+
+    assertThat(Thread.getAllStackTraces().keySet())
+        .filteredOn(thread -> thread.getName().equals("review-poller"))
+        .singleElement()
+        .satisfies(poller -> assertThat(poller.isDaemon()).isFalse());
+  }
+
+  @Test
+  void theStopWaitCoversThePollersWholeWayOut() {
+    // poll 0.2 + revocation in progress (3 + commit 10 + its retry after the stop's wakeup 10)
+    // + shutdown grace 30 + final commit and close 2 x 10
+    assertThat(Engine.pollerShutdownBudget(DEFAULTS)).isEqualTo(Duration.ofMillis(73_200));
   }
 
   @Test
@@ -243,6 +311,7 @@ class EngineTest {
     final AtomicInteger subscribeCalls = new AtomicInteger();
     final AtomicInteger closeCalls = new AtomicInteger();
     volatile String closedByThread;
+    volatile Map<TopicPartition, OffsetAndMetadata> lastSyncCommit;
     volatile CountDownLatch pollRelease;
 
     ObservedConsumer() {
@@ -276,9 +345,21 @@ class EngineTest {
 
     @Override
     public synchronized void close() {
+      close(Duration.ZERO);
+    }
+
+    @Override
+    public synchronized void close(Duration timeout) {
       closeCalls.incrementAndGet();
       closedByThread = Thread.currentThread().getName();
-      super.close();
+      super.close(timeout);
+    }
+
+    @Override
+    public synchronized void commitSync(
+        Map<TopicPartition, OffsetAndMetadata> offsets, Duration timeout) {
+      lastSyncCommit = Map.copyOf(offsets);
+      super.commitSync(offsets, timeout);
     }
   }
 

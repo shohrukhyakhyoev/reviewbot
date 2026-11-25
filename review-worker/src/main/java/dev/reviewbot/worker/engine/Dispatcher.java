@@ -89,6 +89,11 @@ final class Dispatcher {
     return remaining == null;
   }
 
+  /** Test probe. */
+  boolean isClosed(TopicPartition partition) {
+    return closed.contains(partition);
+  }
+
   int activeKeys() {
     return queues.size();
   }

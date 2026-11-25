@@ -104,31 +104,34 @@ public final class OffsetTracker {
     }
   }
 
-  /** Last-complete offsets advanced since the last confirmed commit; the committer adds 1 (§19.2). */
-  public Map<TopicPartition, Long> committable() {
+  /**
+   * Last-complete offsets advanced since the last confirmed commit, stamped with their registration;
+   * the committer adds 1 (§19.2).
+   */
+  public Map<TopicPartition, TrackedOffset> committable() {
     return committable(parts.keySet());
   }
 
-  public Map<TopicPartition, Long> committable(Collection<TopicPartition> subset) {
-    var advanced = new HashMap<TopicPartition, Long>();
+  public Map<TopicPartition, TrackedOffset> committable(Collection<TopicPartition> subset) {
+    var advanced = new HashMap<TopicPartition, TrackedOffset>();
     for (var tp : subset) {
       var p = parts.get(tp);
       if (p != null) {
-        p.uncommittedWatermark().ifPresent(wm -> advanced.put(tp, wm));
+        p.uncommittedWatermark()
+            .ifPresent(wm -> advanced.put(tp, new TrackedOffset(tp, p.generation, wm)));
       }
     }
     return advanced;
   }
 
-  /** Records a commit Kafka confirmed; pass the watermarks {@link #committable} returned, not +1. */
-  public void markCommitted(Map<TopicPartition, Long> watermarks) {
-    watermarks.forEach(
-        (tp, wm) -> {
-          var p = parts.get(tp);
-          if (p != null) {
-            p.committed(wm);
-          }
-        });
+  /** Records a commit Kafka confirmed; pass what {@link #committable} returned, not +1. */
+  public void markCommitted(Map<TopicPartition, TrackedOffset> watermarks) {
+    for (TrackedOffset confirmed : watermarks.values()) {
+      var p = parts.get(confirmed.partition());
+      if (p != null && confirmed.generation() == p.generation) {
+        p.committed(confirmed.offset());
+      }
+    }
   }
 
   /** Test probe: the current watermark, or empty when the partition is not registered. */

@@ -63,7 +63,9 @@ public record ReviewbotProperties(
       @DefaultValue("100") int maxPollRecords,
       @DefaultValue("200") int inFlightCap,
       @DefaultValue("100") int resumeThreshold,
-      @DefaultValue("30s") Duration shutdownGrace) {
+      @DefaultValue("30s") Duration shutdownGrace,
+      @DefaultValue("3s") Duration revocationGrace,
+      @DefaultValue("10s") Duration kafkaCallTimeout) {
 
     public Consumer {
       positive(sessionTimeout, "sessionTimeout");
@@ -71,6 +73,8 @@ public record ReviewbotProperties(
       positive(maxPollInterval, "maxPollInterval");
       positive(pollTimeout, "pollTimeout");
       positive(shutdownGrace, "shutdownGrace");
+      positive(revocationGrace, "revocationGrace");
+      positive(kafkaCallTimeout, "kafkaCallTimeout");
       // Kafka's guidance: a heartbeat at most a third of the session, so one miss is not a rebalance.
       if (heartbeatInterval.multipliedBy(3).compareTo(sessionTimeout) > 0) {
         throw new IllegalArgumentException("heartbeatInterval must be at most sessionTimeout / 3");

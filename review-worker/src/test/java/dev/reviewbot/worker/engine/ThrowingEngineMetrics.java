@@ -38,6 +38,16 @@ final class ThrowingEngineMetrics implements EngineMetrics {
   }
 
   @Override
+  public void shutdownGraceExpired(int stillInFlight) {
+    throw backendDown();
+  }
+
+  @Override
+  public void consumerCloseFailed(Exception cause) {
+    throw backendDown();
+  }
+
+  @Override
   public void pollerDied(Throwable cause) {
     throw backendDown();
   }
