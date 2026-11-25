@@ -451,3 +451,13 @@ Approved by the human. Adds to §3 (components) and §4 (close gate).
 - **Guard (`pretool_guard.py` rule 7):** still asks before every Notion/inbox/ADR write. Only the message changed:
   approve a note write only when the text is the human's own words from the chat. Pick "always allow" in the
   permission prompt for the Notion tools to stop the prompts, if wanted.
+
+## Amendment 5 (2026-11-25): `ci-runner` ships the ticket on Sonnet
+
+- **New agent `.claude/agents/ci-runner.md`** (`model: sonnet`, tools Bash + Read, never edits or commits):
+  `/close` step 8.4–8.8 (push, PR, watch CI, rebase-merge on green, back to `main`) is delegated to it.
+  Waiting on CI is many cheap turns; on the Opus main session they were the costliest part of a close.
+- **`green runs: N`:** when an acceptance criterion demands N consecutive green CI runs (E4-5), the agent
+  reruns the workflow until N in a row; a red rerun stops without merging.
+- Unchanged: the human's model choice for the main session (Opus also for Pair, for code quality);
+  `java-mentor` and `code-tidier` stay on Opus.
