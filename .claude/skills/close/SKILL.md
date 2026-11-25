@@ -52,15 +52,13 @@ Run the gates **in order. Stop at the first failure**, say exactly what is missi
       of what changed and why. **No `Co-Authored-By` or any AI-attribution trailer** (the human's saved
       preference overrides the default). Never `--no-verify`. If the hook refuses, fix the cause and stop if
       it is a real gate failure; do not work around it.
-   4. **Push** with `git push -u origin <branch>`.
-   5. **PR.** `gh pr create --base main` with title = the commit subject and a short body (Built / Tests from
-      the PROGRESS entry, plus any risk worth watching in CI). No "Generated with Claude Code" footer.
-   6. **CI.** `gh pr checks <n> --watch`. **Red or cancelled → stop**: leave the PR and branch open, report the
-      failing job and step, do not merge. The human decides the next move.
-   7. **Merge only when CI is green:** `gh pr merge <n> --rebase --delete-branch` (rebase-merge: no merge
-      commit, no squash).
-   8. **Return to `main`.** `git switch main`, `git pull --ff-only`, `git fetch --prune`. Confirm the feature
-      branch is gone locally and on the remote.
+   4–8. **Delegate push → PR → CI → merge → back to `main` to the `ci-runner` subagent** (Agent tool,
+      `subagent_type: "ci-runner"`, runs on Sonnet: waiting on CI is not Opus work). Send only:
+      > Branch `<branch>`. PR title: `<commit subject>`. green runs: `<N>`. PR body:
+      > <short body: Built / Tests from the PROGRESS entry, plus any risk worth watching in CI>
+      `N` = the number of consecutive green CI runs an acceptance criterion demands (e.g. "3 consecutive CI
+      runs"), else 1. The agent stops on red without merging; relay its report unchanged. The human decides
+      the next move.
    9. **Report** in 3 lines: the PR link, the new `main` commit, and `Next: /ticket <next id>`
       (`python scripts/claude/ctx.py next`).
    If any command in 1–8 fails unexpectedly, stop at that point and say exactly where the repo is left
