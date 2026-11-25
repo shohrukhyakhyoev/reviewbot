@@ -49,8 +49,8 @@ class OffsetTrackerPropertyTest {
       assertThat(tracker.watermark(TP)).hasValue(prefix);
       var reported = tracker.committable().get(TP);
       if (reported != null) {
-        assertThat(reported).isEqualTo(prefix).isGreaterThan(lastCommittable);
-        lastCommittable = reported;
+        assertThat(reported.offset()).isEqualTo(prefix).isGreaterThan(lastCommittable);
+        lastCommittable = reported.offset();
         tracker.markCommitted(Map.of(TP, reported));
       }
     }

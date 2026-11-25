@@ -27,7 +27,9 @@ class ConsumerSettingsTest {
           100,
           200,
           100,
-          Duration.ofSeconds(30));
+          Duration.ofSeconds(30),
+          Duration.ofSeconds(3),
+          Duration.ofSeconds(10));
 
   @Test
   void everySection43ValueIsPinned() {

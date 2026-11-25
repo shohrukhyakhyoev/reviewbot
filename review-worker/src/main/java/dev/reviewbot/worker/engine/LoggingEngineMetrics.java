@@ -45,9 +45,18 @@ final class LoggingEngineMetrics implements EngineMetrics {
 
   @Override
   public void commitFailed(Collection<TopicPartition> partitions, Exception cause) {
+    LOG.warn("commit failed partitions={} cause={}", partitions, cause.getClass().getName());
+  }
+
+  @Override
+  public void shutdownGraceExpired(int stillInFlight) {
+    LOG.warn("shutdown grace expired, still in flight={}", stillInFlight);
+  }
+
+  @Override
+  public void consumerCloseFailed(Exception cause) {
     LOG.warn(
-        "commit failed, resent next cycle partitions={} cause={}",
-        partitions,
+        "consumer close failed, partitions move after the session timeout cause={}",
         cause.getClass().getName());
   }
 

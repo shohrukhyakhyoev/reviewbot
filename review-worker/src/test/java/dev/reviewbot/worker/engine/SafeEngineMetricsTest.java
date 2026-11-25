@@ -50,9 +50,13 @@ class SafeEngineMetricsTest {
     metrics.strayInterruptCleared(record);
     metrics.pauseState(PauseReason.BACKPRESSURE, true);
     metrics.commitFailed(List.of(P0), commitRejected);
+    metrics.shutdownGraceExpired(3);
+    metrics.consumerCloseFailed(commitRejected);
     metrics.pollerDied(cause);
 
     assertThat(recording.pollerDeaths).containsExactly(cause);
+    assertThat(recording.closeFailures).containsExactly(commitRejected);
+    assertThat(recording.expiredShutdownGraces).containsExactly(3);
     assertThat(recording.commitFailures).containsExactly(List.of(P0));
     assertThat(recording.closedPartitionRoutes).containsExactly(P0);
     assertThat(recording.outcomeHandlerFailures).containsExactly(cause);
@@ -75,6 +79,8 @@ class SafeEngineMetricsTest {
               metrics.strayInterruptCleared(record);
               metrics.pauseState(PauseReason.BACKPRESSURE, true);
               metrics.commitFailed(List.of(P0), commitRejected);
+              metrics.shutdownGraceExpired(3);
+              metrics.consumerCloseFailed(commitRejected);
               metrics.pollerDied(cause);
             })
         .doesNotThrowAnyException();
@@ -94,6 +100,11 @@ class SafeEngineMetricsTest {
                 + " lost=BACKPRESSURE active=true metricsCause=java.lang.IllegalStateException",
             "engine metrics failed, event not recorded event=commitFailed lost=[" + P0 + "]"
                 + " cause=org.apache.kafka.common.errors.RebalanceInProgressException"
+                + " metricsCause=java.lang.IllegalStateException",
+            "engine metrics failed, event not recorded event=shutdownGraceExpired"
+                + " lost=stillInFlight=3 metricsCause=java.lang.IllegalStateException",
+            "engine metrics failed, event not recorded event=consumerCloseFailed"
+                + " lost=org.apache.kafka.common.errors.RebalanceInProgressException"
                 + " metricsCause=java.lang.IllegalStateException",
             "engine metrics failed, event not recorded event=pollerDied"
                 + " lost=java.lang.IllegalStateException metricsCause=java.lang.IllegalStateException");

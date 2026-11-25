@@ -67,6 +67,22 @@ final class SafeEngineMetrics implements EngineMetrics {
   }
 
   @Override
+  public void shutdownGraceExpired(int stillInFlight) {
+    contain(
+        "shutdownGraceExpired",
+        "stillInFlight=" + stillInFlight,
+        () -> delegate.shutdownGraceExpired(stillInFlight));
+  }
+
+  @Override
+  public void consumerCloseFailed(Exception cause) {
+    contain(
+        "consumerCloseFailed",
+        cause.getClass().getName(),
+        () -> delegate.consumerCloseFailed(cause));
+  }
+
+  @Override
   public void pollerDied(Throwable cause) {
     contain("pollerDied", cause.getClass().getName(), () -> delegate.pollerDied(cause));
   }

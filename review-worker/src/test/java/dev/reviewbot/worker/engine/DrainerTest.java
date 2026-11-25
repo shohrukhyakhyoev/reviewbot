@@ -1,5 +1,6 @@
 package dev.reviewbot.worker.engine;
 
+import static dev.reviewbot.worker.engine.Committables.offsetsOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
@@ -253,7 +254,7 @@ class DrainerTest {
         .containsExactly(
             new Completion(1, FailureClassifier.classify(boom)), new Completion(2, SUCCESS));
     assertThat(spawns).hasValue(1);
-    assertThat(tracker.committable()).containsEntry(P0, 2L);
+    assertThat(offsetsOf(tracker.committable())).containsEntry(P0, 2L);
   }
 
   @Test
@@ -278,7 +279,7 @@ class DrainerTest {
     assertThat(metrics.outcomeHandlerFailures).containsExactly(boom);
     assertThat(metrics.markCompleteFailures).isEmpty();
     assertThat(executed).containsExactly(2L);
-    assertThat(tracker.committable()).containsEntry(P0, 2L);
+    assertThat(offsetsOf(tracker.committable())).containsEntry(P0, 2L);
   }
 
   // A zombie: its partition is registered again (new generation) while its job runs (I7). The
@@ -327,7 +328,7 @@ class DrainerTest {
 
     awaitQuiescence(dispatcher, 0);
     assertThat(executed).containsExactly(2L);
-    assertThat(tracker.committable()).containsEntry(P0, 2L);
+    assertThat(offsetsOf(tracker.committable())).containsEntry(P0, 2L);
   }
 
   // A poller bug dispatches offset 1 twice with one receipt; the tracker refuses the second
@@ -350,7 +351,7 @@ class DrainerTest {
         .singleElement()
         .isInstanceOf(IllegalStateException.class);
     assertThat(executed).containsExactly(2L);
-    assertThat(tracker.committable()).containsEntry(P0, 2L);
+    assertThat(offsetsOf(tracker.committable())).containsEntry(P0, 2L);
     assertThat(permits.availablePermits()).as("the refused duplicate keeps one").isEqualTo(CAP - 1);
   }
 
@@ -471,7 +472,7 @@ class DrainerTest {
     assertThat(completions)
         .containsExactly(new Completion(1, classified), new Completion(2, classified));
     assertThat(executed).isEmpty();
-    assertThat(tracker.committable()).containsEntry(P0, 2L);
+    assertThat(offsetsOf(tracker.committable())).containsEntry(P0, 2L);
   }
 
   private static ConsumerRecord<String, byte[]> unreadable(long offset, RuntimeException failure) {

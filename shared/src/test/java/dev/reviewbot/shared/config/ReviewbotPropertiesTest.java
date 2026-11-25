@@ -63,6 +63,8 @@ class ReviewbotPropertiesTest {
     assertThat(consumer.inFlightCap()).isEqualTo(200);
     assertThat(consumer.resumeThreshold()).isEqualTo(100);
     assertThat(consumer.shutdownGrace()).isEqualTo(Duration.ofSeconds(30));
+    assertThat(consumer.revocationGrace()).isEqualTo(Duration.ofSeconds(3));
+    assertThat(consumer.kafkaCallTimeout()).isEqualTo(Duration.ofSeconds(10));
   }
 
   @Test
@@ -158,6 +160,8 @@ class ReviewbotPropertiesTest {
         "reviewbot.consumer.heartbeat-interval=16s",
         "reviewbot.consumer.poll-timeout=300s",
         "reviewbot.consumer.poll-timeout=0s",
+        "reviewbot.consumer.revocation-grace=0s",
+        "reviewbot.consumer.kafka-call-timeout=0s",
         "reviewbot.health.failures-to-pause=0",
         "reviewbot.health.probe-interval=0s",
         "reviewbot.limits.rate-cap-per-installation=0",

@@ -1,5 +1,6 @@
 package dev.reviewbot.worker.engine;
 
+import static dev.reviewbot.worker.engine.Committables.offsetsOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
@@ -258,7 +259,7 @@ class OffsetTrackerTest {
     tracker.markComplete(new10);
 
     assertThat(tracker.watermark(P0)).hasValue(10);
-    assertThat(tracker.committable()).containsExactly(entry(P0, 10L));
+    assertThat(offsetsOf(tracker.committable())).containsExactly(entry(P0, 10L));
 
     tracker.markComplete(zombie10);
     tracker.markComplete(new11);
@@ -281,7 +282,7 @@ class OffsetTrackerTest {
     complete(P0, 51);
 
     var advanced = tracker.committable();
-    assertThat(advanced).containsExactly(entry(P0, 51L));
+    assertThat(offsetsOf(advanced)).containsExactly(entry(P0, 51L));
     assertThat(tracker.committable()).isEqualTo(advanced);
 
     tracker.markCommitted(advanced);
@@ -295,17 +296,19 @@ class OffsetTrackerTest {
     complete(P0, 51);
     tracker.committable();
 
-    assertThat(tracker.committable(List.of(P0))).containsExactly(entry(P0, 51L));
+    assertThat(offsetsOf(tracker.committable(List.of(P0)))).containsExactly(entry(P0, 51L));
   }
 
   @Test
   void aLateOlderConfirmationNeverUndoesANewerOne() {
     tracker.register(P0, 50);
     complete(P0, 50);
+    var older = tracker.committable();
     complete(P0, 51);
+    var newer = tracker.committable();
 
-    tracker.markCommitted(Map.of(P0, 51L));
-    tracker.markCommitted(Map.of(P0, 50L));
+    tracker.markCommitted(newer);
+    tracker.markCommitted(older);
 
     assertThat(tracker.committable()).isEmpty();
   }
@@ -314,10 +317,12 @@ class OffsetTrackerTest {
   void aConfirmationBeyondTheWatermarkIsABug() {
     tracker.register(P0, 50);
     complete(P0, 50);
+    var reported = tracker.committable().get(P0);
+    var plusOne = new TrackedOffset(P0, reported.generation(), reported.offset() + 1);
 
     assertThatIllegalArgumentException()
-        .isThrownBy(() -> tracker.markCommitted(Map.of(P0, 51L)));
-    assertThat(tracker.committable()).containsExactly(entry(P0, 50L));
+        .isThrownBy(() -> tracker.markCommitted(Map.of(P0, plusOne)));
+    assertThat(offsetsOf(tracker.committable())).containsExactly(entry(P0, 50L));
   }
 
   @Test
@@ -325,10 +330,40 @@ class OffsetTrackerTest {
     tracker.register(P1, 7);
     complete(P1, 7);
 
-    tracker.markCommitted(Map.of(P0, 5L));
+    tracker.markCommitted(Map.of(P0, new TrackedOffset(P0, 1, 5)));
 
     assertThat(tracker.watermark(P0)).isEmpty();
-    assertThat(tracker.committable()).containsExactly(entry(P1, 7L));
+    assertThat(offsetsOf(tracker.committable())).containsExactly(entry(P1, 7L));
+  }
+
+  @Test
+  void aConfirmationFromAnEarlierRegistrationAboveTheNewWatermarkIsIgnored() {
+    tracker.register(P0, 50);
+    complete(P0, 50);
+    complete(P0, 51);
+    var fromFirstRegistration = tracker.committable();
+    tracker.unregister(List.of(P0));
+    tracker.register(P0, 48);
+    complete(P0, 48);
+
+    tracker.markCommitted(fromFirstRegistration);
+
+    assertThat(offsetsOf(tracker.committable())).containsExactly(entry(P0, 48L));
+  }
+
+  @Test
+  void aConfirmationFromAnEarlierRegistrationNeverHidesACommitStillOwed() {
+    tracker.register(P0, 50);
+    complete(P0, 50);
+    var fromFirstRegistration = tracker.committable();
+    tracker.unregister(List.of(P0));
+    tracker.register(P0, 49);
+    complete(P0, 49);
+    complete(P0, 50);
+
+    tracker.markCommitted(fromFirstRegistration);
+
+    assertThat(offsetsOf(tracker.committable())).containsExactly(entry(P0, 50L));
   }
 
   @Test
@@ -347,7 +382,7 @@ class OffsetTrackerTest {
 
     complete(P0, 51);
 
-    assertThat(tracker.committable()).containsExactly(entry(P0, 51L));
+    assertThat(offsetsOf(tracker.committable())).containsExactly(entry(P0, 51L));
   }
 
   @Test
@@ -356,7 +391,7 @@ class OffsetTrackerTest {
     tracker.register(P1, 7);
     complete(P1, 7);
 
-    assertThat(tracker.committable()).containsExactly(entry(P1, 7L));
+    assertThat(offsetsOf(tracker.committable())).containsExactly(entry(P1, 7L));
   }
 
   @Test
@@ -379,8 +414,8 @@ class OffsetTrackerTest {
     complete(P0, 50);
     complete(P1, 7);
 
-    assertThat(tracker.committable(List.of(P0))).containsExactly(entry(P0, 50L));
-    assertThat(tracker.committable()).containsOnly(entry(P0, 50L), entry(P1, 7L));
+    assertThat(offsetsOf(tracker.committable(List.of(P0)))).containsExactly(entry(P0, 50L));
+    assertThat(offsetsOf(tracker.committable())).containsOnly(entry(P0, 50L), entry(P1, 7L));
   }
 
   @Test

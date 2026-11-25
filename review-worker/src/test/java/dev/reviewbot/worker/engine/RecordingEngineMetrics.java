@@ -14,6 +14,8 @@ final class RecordingEngineMetrics implements EngineMetrics {
   final List<TrackedOffset> clearedInterrupts = new CopyOnWriteArrayList<>();
   final List<Collection<TopicPartition>> commitFailures = new CopyOnWriteArrayList<>();
   final List<Throwable> pollerDeaths = new CopyOnWriteArrayList<>();
+  final List<Integer> expiredShutdownGraces = new CopyOnWriteArrayList<>();
+  final List<Exception> closeFailures = new CopyOnWriteArrayList<>();
   final List<String> pauseStates = new CopyOnWriteArrayList<>();
 
   @Override
@@ -44,6 +46,16 @@ final class RecordingEngineMetrics implements EngineMetrics {
   @Override
   public void commitFailed(Collection<TopicPartition> partitions, Exception cause) {
     commitFailures.add(partitions);
+  }
+
+  @Override
+  public void shutdownGraceExpired(int stillInFlight) {
+    expiredShutdownGraces.add(stillInFlight);
+  }
+
+  @Override
+  public void consumerCloseFailed(Exception cause) {
+    closeFailures.add(cause);
   }
 
   @Override
