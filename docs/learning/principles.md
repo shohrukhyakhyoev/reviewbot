@@ -27,7 +27,7 @@ entry in `docs/learning/ticket-notes.md`.
 | Types that tell the truth (closed set, not strings) | — | E1-2, E3-1 | 2 | yes: propose a registry entry |
 | Optional never as a field or parameter | — | E1-2 | 1 | — |
 | §7.1 breaker open ⇒ BREAKER_PARKED with frozen counters (§11.2) | circuit-breaker | E1-2 | 1 | — |
-| Names that say intent | — | E1-2, E1-4, E3-0, E3-3, E4-4, E4-5 | 6 | yes: propose a registry entry |
+| Names that say intent | — | E1-2, E1-4, E3-0, E3-3, E4-4, E4-5, E5-0 | 7 | yes: propose a registry entry |
 | DRY | — | E1-2, E4-2 | 2 | yes: propose a registry entry |
 | §10.1 route by kind first (I5 catch-all classifies correctly) | circuit-breaker | E1-2 | 1 | — |
 | YAGNI | — | E1-2, E4-2, E4-3, E4-5 | 4 | yes: propose a registry entry |
@@ -37,7 +37,7 @@ entry in `docs/learning/ticket-notes.md`.
 | One behaviour per test, in the test class named for it | — | E1-4 | 1 | — |
 | Bound untrusted input at the trust boundary | — | E3-0 | 1 | — |
 | Encapsulation (least visibility) | — | E3-0 | 1 | — |
-| A test must fail when the property breaks | — | E3-0, E3-2, E4-0, E4-1, E4-2, E4-3, E4-4, E4-5 | 8 | yes: propose a registry entry |
+| A test must fail when the property breaks | — | E3-0, E3-2, E4-0, E4-1, E4-2, E4-3, E4-4, E4-5, E5-0 | 9 | yes: propose a registry entry |
 | ISP (depend only on what you use) and acyclic package dependencies | solid | E3-0 | 1 | — |
 | Consistency (one vocabulary per method) | — | E3-0, E4-4 | 2 | yes: propose a registry entry |
 | Design for extension or prohibit it | — | E3-0 | 1 | — |
@@ -49,7 +49,7 @@ entry in `docs/learning/ticket-notes.md`.
 | Comments match the code (no unverified claims) | — | E3-1, E4-2, E4-5 | 3 | yes: propose a registry entry |
 | SRP (counting vs diagnostic logging in one port) | solid | E3-1 | 1 | — |
 | §6.1 4d every produce failure is a 503 (closed outcome set) | rest-principles | E3-3 | 1 | — |
-| Nothing lost on failure paths | observability | E3-3, E4-2, E4-3 | 3 | yes: append to `observability` |
+| Nothing lost on failure paths | observability | E3-3, E4-2, E4-3, E5-0 | 4 | yes: append to `observability` |
 | Injectable clock (no hidden time source) | — | E3-3 | 1 | — |
 | Fail fast on malformed input (one definition of valid at the trust boundary) | — | E3-3 | 1 | — |
 | I7 / O5 zombie completions are never committed and never contaminate a re-registration | kafka | E4-0 | 1 | — |
@@ -74,6 +74,10 @@ entry in `docs/learning/ticket-notes.md`.
 | Types that tell the truth | — | E4-4 | 1 | — |
 | I7 zombie progress is never committed (the coordinator's rejection is backstop only) | kafka | E4-4 | 1 | — |
 | I7 zombie completions still release the permit (I4) | kafka | E4-5 | 1 | — |
-| Tests without sleeps or real time (no hidden timing assumption) | — | E4-5 | 1 | — |
+| Tests without sleeps or real time (no hidden timing assumption) | — | E4-5, E5-0 | 2 | yes: propose a registry entry |
 | Test isolation | — | E4-5 | 1 | — |
 | Reproducible randomized tests (a logged seed must replay the run) | — | E4-5 | 1 | — |
+| DRY (one owner for the §5.1 state machine) | — | E5-0 | 1 | — |
+| Readable boolean expressions | — | E5-0 | 1 | — |
+| Consistent formatting | — | E5-0 | 1 | — |
+| Guard scoped to the context that needs it | — | E5-0 | 1 | — |

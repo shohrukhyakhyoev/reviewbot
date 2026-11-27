@@ -42,7 +42,7 @@ State and Actual h through `/ticket` (→ `wip`) and `/close` (→ `done`).
 | E4-3 | Poller | M | Pair     | all | done | core | 7 | 6 | E4-0, E4-2, E1-5 |
 | E4-4 | Rebalance listener + shutdown | M | Pair     | all | done | core | 7 | 6 | E4-3 |
 | E4-5 | Engine integration test | L | Pair     | — | done | core | 5 | 4.5 | E4-4 |
-| E5-0 | Reviews persistence + claim state machine | L | Own      | all | todo | core | 10 | — | E2-3, E1-2, E1-5 |
+| E5-0 | Reviews persistence + claim state machine | L | Pair     | all | done | core | 10 | 7 | E2-3, E1-2, E1-5 |
 | E5-1 | GitHub client foundation | M | Delegate | — | todo | core | 1.5 | — | E1-2, E1-5 |
 | E5-2 | Redis pipeline services: dedup + lock | M | Own      | all | todo | core | 7 | — | E1-1, E1-5, E5-0 |
 | E5-3 | BYOK key crypto + Anthropic adapter | L | Pair     | — | todo | core | 5 | — | E1-4, E1-2, E1-5, E5-0 |
